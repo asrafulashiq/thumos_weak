@@ -1,0 +1,5 @@
+__pycache__/
+Thumos14-Annotations/
+Thumos14reduced-Annotations/
+*.npy
+*.pkl
