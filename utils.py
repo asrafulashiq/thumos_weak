@@ -3,6 +3,7 @@ import numpy as np
 def str2ind(categoryname,classlist):
    return [i for i in range(len(classlist)) if categoryname==classlist[i].decode('utf-8')][0]
 
+
 def strlist2indlist(strlist, classlist):
 	return [str2ind(s,classlist) for s in strlist]
 
@@ -31,8 +32,9 @@ def process_feat(feat, length):
 def write_to_file(dname, dmap, cmap, itr):
     fid = open(dname + '-results.log', 'a+')
     string_to_write = str(itr)
-    for item in dmap:
-        string_to_write += ' ' + '%.2f' %item
+    if dmap:
+      for item in dmap:
+         string_to_write += ' ' + '%.2f' %item
     string_to_write += ' ' + '%.2f' %cmap
     fid.write(string_to_write + '\n')
     fid.close()

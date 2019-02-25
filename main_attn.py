@@ -2,12 +2,12 @@ from __future__ import print_function
 import argparse
 import os
 import torch
-from model import Model
+from model import Model_attn as Model
 from video_dataset import Dataset
-from test import test, test_all
-from train import train
+from test_attn import test, test_all
+from train_attn import train
 from tensorboard_logger import Logger
-import options
+import options_attn as options
 torch.set_default_tensor_type('torch.cuda.FloatTensor')
 import torch.optim as optim
 
@@ -34,6 +34,5 @@ if __name__ == '__main__':
 		train(itr, dataset, args, model, optimizer, logger, device)
 		if  itr % 500 == 0 and not itr == 0:
 			torch.save(model.state_dict(), './ckpt/' + args.model_name + '.pkl')
-		if  itr % 50 == 0 and not itr == 0:
+		if  itr % 200 == 0 and not itr == 0:
 			test(itr, dataset, args, model, logger, device)
-	# test_all(dataset, args, model, device)

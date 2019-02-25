@@ -75,3 +75,8 @@ class Dataset():
 
             return np.array(feat), np.array(labs), done
 
+    def load_one_test(self):
+        for idx in self.testidx:
+            feat = self.features[idx]
+            labs = self.labels_multihot[idx]
+            yield np.array(feat), np.array(labs)

@@ -77,7 +77,7 @@ def train(itr, dataset, args, model, optimizer, logger, device):
     logger.log_value('casloss', casloss, itr)
     logger.log_value('total_loss', total_loss, itr)
 
-    print(f'{itr} : loss : ', [total_loss.data.cpu(), milloss.data.cpu(), casloss.data.cpu()])
+    # print(f'{itr} : loss : ', [total_loss.data.cpu(), milloss.data.cpu(), casloss.data.cpu()])
 
     print('Iteration: %d, Loss: %.3f' %(itr, total_loss.data.cpu().numpy()))
 

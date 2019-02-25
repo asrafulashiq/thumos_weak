@@ -2,7 +2,7 @@ import numpy as np
 import time
 from scipy.signal import savgol_filter
 import sys
-import scipy.io as sio 
+import scipy.io as sio
 
 def str2ind(categoryname,classlist):
    return [i for i in range(len(classlist)) if categoryname==classlist[i]][0]
@@ -32,7 +32,7 @@ def getLocMAP(predictions, th, annotation_path):
 
    gtsegments = np.load(annotation_path + '/segments.npy')
    gtlabels = np.load(annotation_path + '/labels.npy')
-   gtlabels = np.load(annotation_path + '/labels.npy')
+   # gtlabels = np.load(annotation_path + '/labels.npy')
    videoname = np.load(annotation_path + '/videoname.npy'); videoname = np.array([v.decode('utf-8') for v in videoname])
    subset = np.load(annotation_path + '/subset.npy'); subset = np.array([s.decode('utf-8') for s in subset])
    classlist = np.load(annotation_path + '/classlist.npy'); classlist = np.array([c.decode('utf-8') for c in classlist])
@@ -48,7 +48,7 @@ def getLocMAP(predictions, th, annotation_path):
       if subset[i]=='validation' and len(gtsegments[i]):
          gtltr.append(gtlabels[i])
    gtlabelstr = gtltr
-   
+
    # Keep only the test subset annotations
    gts, gtl, vn, dn = [], [], [], []
    for i, s in enumerate(subset):
@@ -83,7 +83,7 @@ def getLocMAP(predictions, th, annotation_path):
    templabelidx = []
    for t in templabelcategories:
       templabelidx.append(str2ind(t,classlist))
-             
+
 
    # process the predictions such that classes having greater than a certain threshold are detected only
    predictions_mod = []
@@ -115,18 +115,18 @@ def getLocMAP(predictions, th, annotation_path):
          e = [idk for idk,item in enumerate(vid_pred_diff) if item==-1]
          for j in range(len(s)):
             aggr_score = np.max(tmp[s[j]:e[j]]) + 0.7*c_score[i][c]
-            if e[j]-s[j]>=2:               
+            if e[j]-s[j]>=2:
                segment_predict.append([i,s[j],e[j],np.max(tmp[s[j]:e[j]])+0.7*c_score[i][c]])
                detection_results[i].append([classlist[c], s[j], e[j], np.max(tmp[s[j]:e[j]])+0.7*c_score[i][c]])
       segment_predict = np.array(segment_predict)
       segment_predict = filter_segments(segment_predict, videoname, ambilist)
-   
+
       # Sort the list of predictions for class c based on score
       if len(segment_predict) == 0:
          return 0
       segment_predict = segment_predict[np.argsort(-segment_predict[:,3])]
 
-      # Create gt list 
+      # Create gt list
       segment_gt = [[i, gtsegments[i][j][0], gtsegments[i][j][1]] for i in range(len(gtsegments)) for j in range(len(gtsegments[i])) if str2ind(gtlabels[i][j],classlist)==c]
       gtpos = len(segment_gt)
 
@@ -154,7 +154,7 @@ def getLocMAP(predictions, th, annotation_path):
       ap.append(prc)
 
    return 100*np.mean(ap)
-  
+
 
 def getDetectionMAP(predictions, annotation_path):
    iou_list = [0.1, 0.2, 0.3, 0.4, 0.5]

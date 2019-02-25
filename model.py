@@ -17,13 +17,11 @@ class Model(torch.nn.Module):
         super(Model, self).__init__()
 
         self.fc = nn.Linear(n_feature, n_feature)
-        self.fc1 = nn.Linear(n_feature, n_feature)
+        # self.fc1 = nn.Linear(n_feature, n_feature)
         self.classifier = nn.Linear(n_feature, n_class)
         self.dropout = nn.Dropout(0.7)
 
         self.apply(weights_init)
-
-        #self.train()
 
     def forward(self, inputs, is_training=True):
 
@@ -36,3 +34,39 @@ class Model(torch.nn.Module):
 
 
         return x, self.classifier(x)
+
+
+class Model_attn(torch.nn.Module):
+    def __init__(self, n_feature, n_class):
+        super(Model_attn, self).__init__()
+
+        self.fc = nn.Linear(n_feature, n_feature)
+        # self.fc1 = nn.Linear(n_feature, n_feature)
+
+        # attention
+        self.fc_a1 = nn.Linear(n_feature, 512)
+        self.fc_a2 = nn.Linear(512, 1)
+
+
+        # classifier
+        self.classifier = nn.Linear(n_feature, n_class)
+        self.dropout = nn.Dropout(0.6)
+
+        self.apply(weights_init)
+
+    def forward(self, inputs, is_training=True):
+
+        x = F.relu(self.fc(inputs))
+        if is_training:
+            x = self.dropout(x)
+
+        # attention
+        x_a = F.relu(self.fc_a1(x))
+        if is_training:
+            x_a = self.dropout(x_a)
+        x_a = self.fc_a2(x_a)
+
+        # classifier
+        x_class = self.classifier(x)
+
+        return x_a, x_class
