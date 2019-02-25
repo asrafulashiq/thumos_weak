@@ -24,11 +24,13 @@ def pad(feat, min_len):
     else:
        return feat
 
+
 def process_feat(feat, length):
-    if len(feat) > length:
-        return random_extract(feat, length)
-    else:
-        return pad(feat, length)
+	if len(feat) > length:
+		_feat = random_extract(feat, length)
+	else:
+		_feat = pad(feat, length)
+	return _feat #/ np.linalg.norm(_feat)
 
 def write_to_file(dname, dmap, cmap, itr):
     fid = open(dname + '-results.log', 'a+')

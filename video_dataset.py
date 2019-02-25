@@ -75,6 +75,13 @@ class Dataset():
 
             return np.array(feat), np.array(labs), done
 
+    def load_valid(self):
+        indices = np.random.choice(self.testidx, size=self.batch_size)
+        data = np.array([utils.process_feat(self.features[i],
+                        self.t_max) for i in indices])
+        labels = np.array([self.labels_multihot[i] for i in indices])
+        return data, labels
+
     def load_one_test(self):
         for idx in self.testidx:
             feat = self.features[idx]

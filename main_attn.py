@@ -24,15 +24,24 @@ if __name__ == '__main__':
 	logger = Logger('./logs/' + args.model_name)
 
 	model = Model(dataset.feature_size, dataset.num_class).to(device)
+	init_itr = 0
 
 	if args.pretrained_ckpt is not None:
-		model.load_state_dict(torch.load(args.pretrained_ckpt))
+		checkpoint = torch.load(args.pretrained_ckpt)
+		model.load_state_dict(checkpoint['model_state_dict'])
+		if 'optimizer_state_dict' in checkpoint:
+			optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+		init_itr = checkpoint['itr']
 
-	optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.0005)
+	# optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.0005)
+	optimizer = optim.SGD(model.parameters(), lr=args.lr)
 
-	for itr in range(args.max_iter):
-		train(itr, dataset, args, model, optimizer, logger, device)
-		if  itr % 500 == 0 and not itr == 0:
-			torch.save(model.state_dict(), './ckpt/' + args.model_name + '.pkl')
-		if  itr % 200 == 0 and not itr == 0:
-			test(itr, dataset, args, model, logger, device)
+	for itr in range(init_itr, args.max_iter):
+		train(itr, dataset, args, model, optimizer, logger, device, valid=args.valid)
+		if  itr % 100 == 0 and not itr == 0:
+			torch.save({
+				'itr': itr,
+				'model_state_dict': model.state_dict()
+			}, './ckpt/' + args.model_name + '.pkl')
+		if  itr % 50 == 0 and not itr == 0:
+			test(itr, dataset, args, model, logger, device, is_detect=True)
