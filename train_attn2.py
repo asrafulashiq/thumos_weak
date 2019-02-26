@@ -58,19 +58,23 @@ def CASL(x, element_logits, seq_len, n_similar, labels, device):
 
 
 def ATTN_loss(attentions, batch_size, seq_len):
+    attentions = torch.sigmoid(attentions)
     attn = attentions.squeeze(dim=-1)
     k = np.ceil(seq_len / 10).astype('int32')
 
     sum_bottom = 0
+    sum_top = 0
     for i in range(batch_size):
         topk, _ = torch.topk(attn[i], int(k[i]))
-        sum_bottom += torch.sum(attn[i]) - torch.sum(topk)
+        s_topk = torch.sum(attn[i]) - torch.sum(topk)
+        sum_bottom += s_topk / np.float(seq_len[i])
+    return sum_bottom
 
-    return sum_bottom / batch_size
 
 def MIL_Loss(element_logits, attentions, labels, device):
-    attentions = torch.softmax(attentions, dim=-2)
-    multit = torch.sum(element_logits * attentions, -2)
+    attentions = torch.sigmoid(attentions)
+    # attentions = torch.softmax(attentions, dim=-2)
+    multit = torch.mean(element_logits * attentions, -2)
     # multit = torch.mean(element_logits, -2)
     mil_loss = -torch.mean(torch.sum(Variable(labels) * F.log_softmax(multit, dim=1), dim=1), dim=0)
     return mil_loss
@@ -92,14 +96,15 @@ def train(itr, dataset, args, model, optimizer, logger, device,
     # casloss = CASL(final_features, element_logits, seq_len, args.num_similar, labels, device)
 
     milloss = MIL_Loss(element_logits, attentions, labels, device)
-    #attn_loss = ATTN_loss(attentions, args.batch_size, seq_len)
+    attn_loss = ATTN_loss(attentions, args.batch_size, seq_len)
 
     # total_loss = args.Lambda * milloss + (1-args.Lambda) * casloss
-    # total_loss = args.Lambda * milloss + (1-args.Lambda) * attn_loss
-    total_loss = milloss
+    total_loss =  milloss + args.Lambda * attn_loss
+    # total_loss = milloss
 
     logger.log_value('train milloss', milloss, itr)
-    #logger.log_value('attnloss', attn_loss, itr)
+    logger.log_value('train_attnloss', attn_loss, itr)
+    logger.log_value('train_total_loss', total_loss, itr)
 
     train_loss = total_loss.data.cpu().numpy()
 
@@ -114,14 +119,23 @@ def train(itr, dataset, args, model, optimizer, logger, device,
     if valid:
         with torch.no_grad():
             features, labels = dataset.load_valid()
+            seq_len = np.sum(np.max(np.abs(features), axis=2) > 0, axis=1)
+            features = features[:, :np.max(seq_len), :]
             features = torch.from_numpy(features).float().to(device)
             labels = torch.from_numpy(labels).float().to(device)
             attentions, element_logits = model(Variable(features), is_training=False)
+
             val_milloss = MIL_Loss(element_logits, attentions, labels, device)
             logger.log_value('val milloss', val_milloss, itr)
-            logger.log_value('diff loss', val_milloss - total_loss, itr)
 
-            val_loss = val_milloss.data.cpu().numpy()
+            val_attn_loss = ATTN_loss(attentions, args.batch_size, seq_len)
+            logger.log_value('val_attnloss', val_attn_loss, itr)
+
+            val_total_loss = val_milloss + args.Lambda * val_attn_loss
+
+            logger.log_value('val_total_loss', val_total_loss, itr)
+
+            val_loss = val_total_loss.data.cpu().numpy()
             print('Iteration: %d, Train Loss: %.4f  Valid Loss: %.4f' %
                   (itr, train_loss, val_loss))
 

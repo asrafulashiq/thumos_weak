@@ -4,8 +4,8 @@ import os
 import torch
 from model import Model_attn as Model
 from ucf_dataset import Dataset
-from test_attn import test
-from train_attn import train
+from test_attn2 import test
+from train_attn2 import train
 from tensorboard_logger import Logger
 import options_ucf
 torch.set_default_tensor_type('torch.cuda.FloatTensor')
@@ -24,8 +24,8 @@ if __name__ == '__main__':
 	logger = Logger('./logs/' + args.model_name)
 
 	model = Model(dataset.feature_size, dataset.num_class).to(device)
-	# optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.0005)
-	optimizer = optim.SGD(model.parameters(), lr=args.lr)
+	optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.0005)
+	# optimizer = optim.SGD(model.parameters(), lr=args.lr)
 	init_itr = 0
 
 	if args.pretrained_ckpt is not None:
@@ -43,6 +43,5 @@ if __name__ == '__main__':
 				'model_state_dict': model.state_dict()
 				# 'optimizer_state_dict': optimizer.state_dict()
 			}, './ckpt/' + args.model_name + '.pkl')
-			# torch.save(model.state_dict(), './ckpt/' + args.model_name + '.pkl')
 		if itr % 50 == 0 and not itr == 0:
 			test(itr, dataset, args, model, logger, device, is_detect=False)

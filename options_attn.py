@@ -9,7 +9,7 @@ parser.add_argument('--feature-size', default=2048, type=int, help='size of feat
 parser.add_argument('--num-class', default=20, type=int, help='number of classes (default: )')
 parser.add_argument('--dataset-name', default='Thumos14reduced', type=str, help='dataset to train on (default: )')
 parser.add_argument('--max-seqlen', default=750, type=int, help='maximum sequence length during training (default: 750)')
-parser.add_argument('--Lambda', default=0.5, help='weight on Co-Activity Loss (default: 0.5)')
+parser.add_argument('--Lambda', default=0.5, type=float, help='weight on Co-Activity Loss (default: 0.5)')
 parser.add_argument('--num-similar', default=3, type=int, help='number of similar pairs in a batch of data  (default: 3)')
 parser.add_argument('--max-grad-norm', type=float, default=10, help='value loss coefficient (default: 50)')
 parser.add_argument('--seed', type=int, default=1, help='random seed (default: 1)')

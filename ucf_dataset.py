@@ -12,9 +12,9 @@ import utils2 as utils
 class Dataset():
     def __init__(self, args):
         self.test_path = '/media/ash/New Volume/dataset/UCF_crime'+\
-            '/custom_split_3D/Custom_test_split_mini.txt'
+            '/custom_split_C3D/Custom_test_split_mini.txt'
         self.train_path = '/media/ash/New Volume/dataset/UCF_crime/'+\
-            'custom_split_3D/Custom_train_split_mini_abnormal.txt'
+            'custom_split_C3D/Custom_train_split_mini_abnormal.txt'
         self.dataset_name = args.dataset_name
         self.num_class = args.num_class
         self.feature_size = args.feature_size
