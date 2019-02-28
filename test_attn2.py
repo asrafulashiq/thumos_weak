@@ -14,7 +14,7 @@ from sklearn.metrics import accuracy_score
 torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 
-def test(itr, dataset, args, model, logger, device, is_detect=True):
+def test(itr, dataset, args, model, logger, device, is_detect=True, is_score=True):
 
     done = False
     instance_logits_stack = []
@@ -49,6 +49,13 @@ def test(itr, dataset, args, model, logger, device, is_detect=True):
     cmap = cmAP(instance_logits_stack, labels_stack)
     print('Classification map %f' % cmap)
     logger.log_value('Test Classification mAP', cmap, itr)
+
+    if is_score:
+        from sklearn.metrics import accuracy_score
+        _gt = np.argmax(labels_stack, axis=-1)
+        _pred = np.argmax(instance_logits_stack, axis=-1)
+        accuracy = accuracy_score(_gt, _pred)
+        print("Accuracy : {:.3f}".format(accuracy*100))
 
     if not is_detect:
         utils.write_to_file(args.dataset_name, None, cmap, itr)

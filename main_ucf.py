@@ -24,8 +24,8 @@ if __name__ == '__main__':
 	logger = Logger('./logs/' + args.model_name)
 
 	model = Model(dataset.feature_size, dataset.num_class).to(device)
-	optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.0005)
-	# optimizer = optim.SGD(model.parameters(), lr=args.lr)
+	# optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.0005)
+	optimizer = optim.SGD(model.parameters(), lr=args.lr)
 	init_itr = 0
 
 	if args.pretrained_ckpt is not None:

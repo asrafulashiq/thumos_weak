@@ -16,16 +16,16 @@ PARENT_FOLDER = Path(_HOME+"/dataset/UCF_crime")
 orig_split_train = PARENT_FOLDER / "Action_Regnition_splits/train_001.txt"
 orig_split_test = PARENT_FOLDER / "Action_Regnition_splits/test_001.txt"
 
-feature_name = "3D"
+feature_name = "C3D"
 feature_folder = PARENT_FOLDER / (feature_name+'_features') / "npy"  # "Avg"
 split_folder = PARENT_FOLDER / ("custom_split_"+feature_name)
 split_folder.mkdir(exist_ok=True)
 
-LABEL_ANOMS = ['Abuse', 'Arrest', 'Arson', 'Assault', 'Burglary',
-                'Explosion', 'Fighting', 'RoadAccidents', 'Robbery',
-                'Shooting', 'Shoplifting', 'Stealing', 'Vandalism']
+# LABEL_ANOMS = ['Abuse', 'Arrest', 'Arson', 'Assault', 'Burglary',
+#                 'Explosion', 'Fighting', 'RoadAccidents', 'Robbery',
+#                 'Shooting', 'Shoplifting', 'Stealing', 'Vandalism']
 
-# LABEL_ANOMS = ['Arrest', 'Arson', 'Assault', 'Burglary', 'Fighting']
+LABEL_ANOMS = ['Arrest', 'Arson', 'Assault', 'Burglary', 'Fighting']
 
 
 DOWN_RATIO = 5./13  # None
