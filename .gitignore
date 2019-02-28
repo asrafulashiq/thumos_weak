@@ -3,3 +3,5 @@ Thumos14-Annotations/
 Thumos14reduced-Annotations/
 *.npy
 *.pkl
+logs/*
+models/*
