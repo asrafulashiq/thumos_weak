@@ -140,7 +140,7 @@ def dense_flow(augs):
     video_path = str(video_name)
     print(video_name)
 
-    cap_iter = cap_vid(video_path, save_dir, skip=6)
+    cap_iter = cap_vid(video_path, save_dir, skip=6, init_frame=3)
 
     dtvl1 = cv2.createOptFlow_DualTVL1()
 
@@ -223,24 +223,24 @@ if __name__ == '__main__':
             save_dir.append(feat_path)
 
     # extract normal folder
-    # normal_test_train = ['Training-Normal-Videos',
-    #                      'Testing_Normal_Videos_Anomaly']
+    normal_test_train = ['Training-Normal-Videos',
+                         'Testing_Normal_Videos_Anomaly']
 
-    # for normal_folder in normal_test_train:
-    #     feat_normal_fldr = FEAT_PARENT_FOLDER / normal_folder
-    #     feat_normal_fldr.mkdir(parents=True, exist_ok=True)
+    for normal_folder in normal_test_train:
+        feat_normal_fldr = FEAT_PARENT_FOLDER / normal_folder
+        feat_normal_fldr.mkdir(parents=True, exist_ok=True)
 
-    #     normal = PARENT_FOLDER / normal_folder
+        normal = PARENT_FOLDER / normal_folder
 
-    #     for vid_file in sorted(normal.iterdir()):
-    #         # vid_file_name = vid_file.name
+        for vid_file in sorted(normal.iterdir()):
+            # vid_file_name = vid_file.name
 
-    #         feat_path = feat_normal_fldr / vid_file.stem
-    #         if not do_overwrite and feat_path.exists():
-    #             print("{} exists".format(feat_path))
-    #             continue
-    #         video_list.append(vid_file)
-    #         save_dir.append(feat_path)
+            feat_path = feat_normal_fldr / vid_file.stem
+            if not do_overwrite and feat_path.exists():
+                print("{} exists".format(feat_path))
+                continue
+            video_list.append(vid_file)
+            save_dir.append(feat_path)
 
     len_videos = len(video_list)
     # pool = Pool(num_workers)

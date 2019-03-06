@@ -3,11 +3,11 @@ import argparse
 import os
 import torch
 from model import Model_tcn as Model
-from ucf_dataset import Dataset
+from video_dataset import Dataset
 from test_tcn import test
 from train_tcn import train
 from tensorboard_logger import Logger
-import options_ucf as options
+import options_attn as options
 torch.set_default_tensor_type('torch.cuda.FloatTensor')
 import torch.optim as optim
 
@@ -24,8 +24,8 @@ if __name__ == '__main__':
 	logger = Logger('./logs/' + args.model_name)
 
 	model = Model(dataset.feature_size, dataset.num_class).to(device)
-	optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.005)
-	# optimizer = optim.SGD(model.parameters(), lr=args.lr)
+	optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.01)
+	# optimizer = optim.SGD(model.parameters(), lr=args.lr, weight_decay=0.005)
 	init_itr = 0
 
 	if args.pretrained_ckpt is not None:

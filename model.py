@@ -35,8 +35,6 @@ class Model(torch.nn.Module):
         #x = F.relu(self.fc1(x))
         #if is_training:
         #    x = self.dropout(x)
-
-
         return x, self.classifier(x)
 
 
@@ -79,8 +77,8 @@ class Model_attn(torch.nn.Module):
 class TemporalAttention(nn.Module):
     def __init__(self, n_feat, dropout_rate=0.5):
         super(TemporalAttention, self).__init__()
-        self.fc = nn.Linear(n_feat, 1)
         self.dropout = nn.Dropout(dropout_rate)
+        self.fc = nn.Linear(n_feat, 1)
 
     def forward(self, input):
         # assume input in (N, L, C) shape
@@ -109,22 +107,34 @@ class SpatialAttention(nn.Module):
         return input * y  # (N. Cin, L)
 
 
+class AdaptiveBlock(nn.Module):
+    def __init__(self, n_feature, L, dropout_rate=0.5):
+        self.tcn = tcn(num_inputs=n_feature,
+                        num_channels=[n_feature],
+                        kernel_size=2, dropout=dropout_rate)
+        self.pool = nn.AdaptiveMaxPool1d(L//2)
+
+    def forward(self, x):
+        x = self.tcn(x)
+        x = self.pool(x)
+        return x
+
+
 class Model_tcn(torch.nn.Module):
-    def __init__(self, n_feature, n_class, dropout_rate=0.5):
+    def __init__(self, n_feature, n_class, dropout_rate=0.5, tlen=750):
         super(Model_tcn, self).__init__()
         self.n_class = n_class
+        self.n_feature = n_feature
 
-        self.tcn1 = tcn(num_inputs=n_feature,
-                        num_channels=[512],
-                        kernel_size=3, dropout=dropout_rate)
+        # self.tcn1 = tcn(num_inputs=512,
+        #                 num_channels=[512, 512],
+        #                 kernel_size=2, dropout=dropout_rate)
 
-        # self.conv1d = nn.Conv1d(
-        #     in_channels=512, out_channels=1, kernel_size=1
-        # )
-
-        self.test_fc= nn.Linear(n_feature, 512)
+        self.test_fc = nn.Linear(n_feature, 512)
         self.bn = nn.BatchNorm1d(512)
-        # self.relu1 = nn.ReLU()
+        self.relu = nn.ReLU()
+
+        self.tcn = tcn(512, [512], kernel_size=1, dropout=0.5)
 
         # self.pool = nn.AdaptiveMaxPool1d(1)
         self.spatial_pool = SpatialAttention(512)
@@ -138,14 +148,18 @@ class Model_tcn(torch.nn.Module):
     def forward(self, inputs, is_training=True):
 
         # input shape : (N, L, Cin)
-        x = inputs.transpose(-1, -2)  # (N, Cin, L)
-        x = tcn(num_inputs=4096,
-                num_channels=[1024],
-                kernel_size=3, dropout=0.5)(x)  # (N, 512, L)
+        x = self.test_fc(inputs)  # (N, L, 512)
+        x = self.relu(x)
+        x = x.transpose(-1, -2)  # (N, 512, L)
 
-        x = nn.AdaptiveMaxPool1d(100)(x)  # (L, 512, 100)
-        x = tcn(1024, [128], kernel_size=3, dropout=0.5)(x)  # (L, 128, 100)
-        x = nn.AdaptiveMaxPool1d(1)(x)  # (L, 128)
-        x = x.squeeze(-1)
-        x = nn.Linear(128, self.n_class)(x)
+        L = x.shape[-1]
+        _len = int(np.log2(L))
+        for i in range(_len):
+            x = self.tcn(x)
+            x = nn.AdaptiveMaxPool1d(L//2)(x)
+        x = nn.AdaptiveMaxPool1d(1)(x)
+
+        x = x.squeeze(-1)  # N, 512
+        x = self.conv_class(x)
+
         return x
