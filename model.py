@@ -109,6 +109,7 @@ class SpatialAttention(nn.Module):
 
 class AdaptiveBlock(nn.Module):
     def __init__(self, n_feature, L, dropout_rate=0.5):
+        super(AdaptiveBlock, self).__init__()
         self.tcn = tcn(num_inputs=n_feature,
                         num_channels=[n_feature],
                         kernel_size=2, dropout=dropout_rate)
@@ -118,6 +119,71 @@ class AdaptiveBlock(nn.Module):
         x = self.tcn(x)
         x = self.pool(x)
         return x
+
+
+class ATTN_wt(nn.Module):
+    def __init__(self, n_feature, kernel=2, dropout_rate=0.5):
+        super(ATTN_wt, self).__init__()
+        self.conv1d = nn.Conv1d(n_feature, kernel, kernel_size=kernel,
+                                stride=kernel)
+        self.relu = nn.ReLU()
+        self.softmax = nn.Softmax(dim=-1)
+
+    def forward(self, x):
+        # input N, L, Cin
+        xt = x.transpose(-1, -2)  # N, Cin, L
+        wt = self.relu(self.conv1d(xt))  # N, 2, L//2
+        w = wt.transpose(-1, -2)  # N, L//2, 2
+        w = self.softmax(w)  # N, L//2, 2
+        return w
+
+
+class Model_detect(nn.Module):
+    def __init__(self, n_feature, n_class, down_rate=2, dropout_rate=0.5):
+        super(Model_detect, self).__init__()
+        self.down_rate = down_rate
+
+        self.init_fc = nn.Linear(n_feature, 512)
+        self.relu = nn.ReLU()
+        self.drop1 = nn.Dropout(dropout_rate)
+
+        self.attn_block = ATTN_wt(512, kernel=down_rate)
+        self.avg_pool = nn.AvgPool1d(kernel_size=down_rate, stride=down_rate,
+                                     ceil_mode=True)
+
+        self.refine_fc = nn.Linear(512, 512)
+        self.drop2 = nn.Dropout(dropout_rate)
+
+        self.fc_class = nn.Linear(512, n_class)
+
+    def forward(self, inputs):
+        # N, L, Cin
+        N, L, _ = inputs.shape
+        x = self.relu(self.init_fc(inputs))
+        x = self.drop1(x)  # N, L, 512
+
+        x = self.drop2(self.relu(self.refine_fc(x)))
+        x_class_init = self.fc_class(x)  # N, L, cls
+
+        w_mean = 0
+        while L != 1:
+            # x = self.drop2(self.relu(self.refine_fc(x)))
+            x = self.drop2(x)
+            wt = self.attn_block(x)  # N, L//2, 2
+            wt = wt.view(N, -1, 1)  # N, L//2 * 2, 1
+            x[:, :L//2 * 2, :] = x[:, :L//2 * 2, :].clone() * wt
+
+            x = x.transpose(-1, -2)
+            x = self.avg_pool(x)
+            x = x.transpose(-1, -2)
+            L = x.shape[-2]
+            w_mean += torch.mean(wt.view(-1)**2)
+
+        w_mean /= (int(np.log2(inputs.shape[-2]))+1)
+
+        x_class = self.fc_class(x)  # N, 1, cls
+        return x_class, x_class_init, w_mean
+
 
 
 class Model_tcn(torch.nn.Module):

@@ -28,6 +28,10 @@ def train(itr, dataset, args, model, optimizer, logger, device,
     ml_loss = -torch.mean(torch.sum(Variable(labels) *
                           F.log_softmax(element_logits, dim=-1), dim=-1), dim=0)
 
+    # ml_loss = F.binary_cross_entropy_with_logits(
+    #     element_logits, labels
+    # )
+
     total_loss = ml_loss
     logger.log_value('train_total_loss', total_loss, itr)
 
@@ -53,6 +57,9 @@ def train(itr, dataset, args, model, optimizer, logger, device,
 
             val_milloss = -torch.mean(torch.sum(Variable(labels) *
                           F.log_softmax(element_logits, dim=-1), dim=-1), dim=0)
+            # val_milloss = F.binary_cross_entropy_with_logits(
+            #     element_logits, labels
+            # )
             val_total_loss = val_milloss
 
             logger.log_value('val_total_loss', val_total_loss, itr)
