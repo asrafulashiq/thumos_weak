@@ -191,11 +191,6 @@ class Model_tcn(torch.nn.Module):
         super(Model_tcn, self).__init__()
         self.n_class = n_class
         self.n_feature = n_feature
-
-        # self.tcn1 = tcn(num_inputs=512,
-        #                 num_channels=[512, 512],
-        #                 kernel_size=2, dropout=dropout_rate)
-
         self.test_fc = nn.Linear(n_feature, 512)
         self.bn = nn.BatchNorm1d(512)
         self.relu = nn.ReLU()
@@ -207,25 +202,29 @@ class Model_tcn(torch.nn.Module):
 
         self.temp_pool = TemporalAttention(512)
 
-        self.conv_class = nn.Linear(512, n_class)
+        self.conv_class = nn.Linear(512, n_class, bias=False)
 
         self.drop = nn.Dropout(dropout_rate)
 
     def forward(self, inputs, is_training=True):
 
         # input shape : (N, L, Cin)
-        x = self.test_fc(inputs)  # (N, L, 512)
-        x = self.relu(x)
-        x = x.transpose(-1, -2)  # (N, 512, L)
+        x_refine = self.drop(self.relu(self.test_fc(inputs)))  # (N, L, 512)
+        x = x_refine.transpose(-1, -2)  # (N, 512, L)
 
-        L = x.shape[-1]
-        _len = int(np.log2(L))
-        for i in range(_len):
-            x = self.tcn(x)
-            x = nn.AdaptiveMaxPool1d(L//2)(x)
-        x = nn.AdaptiveMaxPool1d(1)(x)
+        x_max = nn.AdaptiveMaxPool1d(1)(x)  # N, 512, 1
 
-        x = x.squeeze(-1)  # N, 512
-        x = self.conv_class(x)
 
-        return x
+        # L = x.shape[-1]
+        # _len = int(np.log2(L))
+        # for i in range(_len):
+        #     x = self.tcn(x)
+        #     x = nn.AdaptiveMaxPool1d(L//2)(x)
+        # x = nn.AdaptiveMaxPool1d(1)(x)
+
+        x_cls = x_max.squeeze(-1)  # N, 512
+        x_cls = self.conv_class(x_cls)  # N, 20
+
+        x_all = self.conv_class(x_refine)
+
+        return x_cls, x_all

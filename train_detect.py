@@ -44,6 +44,8 @@ def milloss(element_logits, batch_size, labels, device):
     return milloss
 
 
+
+
 def train(itr, dataset, args, model, optimizer, logger, device,
           valid=False):
 
@@ -57,6 +59,47 @@ def train(itr, dataset, args, model, optimizer, logger, device,
     batch_size = labels.shape[0]
 
     model.train()
+
+    x_class, x_a = model(Variable(features))
+
+    loss_mil = milloss(x_class, batch_size, labels, device)
+
+    total_loss = loss_mil
+    # logger.log_value("train_milloss", loss_mil, itr)
+    logger.log_value('train_total_loss', total_loss, itr)
+
+    train_loss = total_loss.data.cpu().numpy()
+
+    if not valid:
+        print('Iteration: %d, Loss: %.3f' % (itr, train_loss))
+
+    optimizer.zero_grad()
+    total_loss.backward()
+    optimizer.step()
+
+    if valid:
+        model.eval()
+        with torch.no_grad():
+            features, labels = dataset.load_valid()
+            seq_len = np.sum(np.max(np.abs(features), axis=2) > 0, axis=1)
+            features = features[:, :np.max(seq_len), :]
+            features = torch.from_numpy(features).float().to(device)
+            labels = torch.from_numpy(labels).float().to(device)
+            x_class, x_a = model(Variable(features))
+
+            loss_mil = milloss(x_class, batch_size, labels, device)
+            val_total_loss = loss_mil
+
+            logger.log_value("val_mil_loss", val_total_loss, itr)
+
+            val_loss = val_total_loss.data.cpu().numpy()
+            print('Iteration: %d, Train Loss: %.4f  Valid Loss: %.4f' %
+                  (itr, train_loss, val_loss))
+
+
+
+
+"""
     x_class, x_class_init, w_mean = model(Variable(features))
 
     # sparsity loss
@@ -123,5 +166,5 @@ def train(itr, dataset, args, model, optimizer, logger, device,
                   (itr, train_loss, val_loss))
 
     # logger.log_value('total_loss', total_loss, itr)
-
+"""
 

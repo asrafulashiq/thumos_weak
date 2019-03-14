@@ -52,8 +52,8 @@ def test(itr, dataset, args, model, logger, device):
     print('Detection map @ %f = %f' %(iou[0], dmap[0]))
     print('Detection map @ %f = %f' %(iou[1], dmap[1]))
     print('Detection map @ %f = %f' %(iou[2], dmap[2]))
-    print('Detection map @ %f = %f' %(iou[3], dmap[3]))
-    print('Detection map @ %f = %f' %(iou[4], dmap[4]))
+    # print('Detection map @ %f = %f' %(iou[3], dmap[3]))
+    # print('Detection map @ %f = %f' %(iou[4], dmap[4]))
 
     logger.log_value('Test Classification mAP', cmap, itr)
     for item in list(zip(dmap,iou)):

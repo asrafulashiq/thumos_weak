@@ -31,13 +31,16 @@ def test(itr, dataset, args, model, logger, device, is_detect=True, is_score=Tru
 
         with torch.no_grad():
             features = features.unsqueeze(0)
-            x_class, x_class_init, w_mean = model(Variable(features))
+            x_class, x_a = model(Variable(features))
 
         x_class = x_class.squeeze()
         tmp = F.softmax(x_class, -1)
         tmp = tmp.cpu().data.numpy()
         instance_logits_stack.append(tmp)
         labels_stack.append(labels)
+
+        x_a = x_a.squeeze()
+        element_logits_stack.append(x_a.cpu().data.numpy())
 
     instance_logits_stack = np.array(instance_logits_stack)
     labels_stack = np.array(labels_stack)
@@ -69,8 +72,8 @@ def test(itr, dataset, args, model, logger, device, is_detect=True, is_score=Tru
     print('Detection map @ %f = %f' % (iou[0], dmap[0]))
     print('Detection map @ %f = %f' % (iou[1], dmap[1]))
     print('Detection map @ %f = %f' % (iou[2], dmap[2]))
-    print('Detection map @ %f = %f' % (iou[3], dmap[3]))
-    print('Detection map @ %f = %f' % (iou[4], dmap[4]))
+    # print('Detection map @ %f = %f' % (iou[3], dmap[3]))
+    # print('Detection map @ %f = %f' % (iou[4], dmap[4]))
     for item in list(zip(dmap, iou)):
         logger.log_value('Test Detection mAP @ IoU = ' + str(item[1]), item[0], itr)
 
