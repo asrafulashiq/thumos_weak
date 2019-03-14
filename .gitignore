@@ -5,3 +5,4 @@ Thumos14reduced-Annotations/
 *.pkl
 logs/*
 models/*
+*.back
