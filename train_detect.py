@@ -37,7 +37,7 @@ def milloss(element_logits, batch_size, labels, device):
     # labels = labels / torch.sum(labels, dim=1, keepdim=True)
     milloss = -torch.mean(
                 torch.sum(Variable(labels) *
-                F.log_softmax(element_logits.squeeze(), dim=1), dim=-1), dim=0)
+                F.log_softmax(element_logits, dim=1), dim=-1), dim=0)
     # milloss = F.binary_cross_entropy_with_logits(
     #     element_logits.squeeze(), labels
     # )

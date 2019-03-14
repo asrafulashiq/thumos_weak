@@ -31,7 +31,7 @@ def test(itr, dataset, args, model, logger, device, is_detect=True, is_score=Tru
 
         with torch.no_grad():
             features = features.unsqueeze(0)
-            x_class, x_a = model(Variable(features))
+            x_class, x_a = model(Variable(features), is_training=False)
 
         x_class = x_class.squeeze()
         tmp = F.softmax(x_class, -1)
@@ -70,8 +70,8 @@ def test(itr, dataset, args, model, logger, device, is_detect=True, is_score=Tru
                 labels_stack[i, :] = np.zeros_like(labels_stack[i,:])
 
     print('Detection map @ %f = %f' % (iou[0], dmap[0]))
-    print('Detection map @ %f = %f' % (iou[1], dmap[1]))
-    print('Detection map @ %f = %f' % (iou[2], dmap[2]))
+    # print('Detection map @ %f = %f' % (iou[1], dmap[1]))
+    # print('Detection map @ %f = %f' % (iou[2], dmap[2]))
     # print('Detection map @ %f = %f' % (iou[3], dmap[3]))
     # print('Detection map @ %f = %f' % (iou[4], dmap[4]))
     for item in list(zip(dmap, iou)):

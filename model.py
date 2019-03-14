@@ -142,48 +142,43 @@ class Model_detect(nn.Module):
     def __init__(self, n_feature, n_class, down_rate=2, dropout_rate=0.5):
         super(Model_detect, self).__init__()
         self.down_rate = down_rate
+        self.dropout_rate = dropout_rate
 
         self.init_fc = nn.Linear(n_feature, 512)
         self.relu = nn.ReLU()
         self.drop1 = nn.Dropout(dropout_rate)
-
-        self.attn_block = ATTN_wt(512, kernel=down_rate)
-        self.avg_pool = nn.AvgPool1d(kernel_size=down_rate, stride=down_rate,
-                                     ceil_mode=True)
-
-        self.refine_fc = nn.Linear(512, 512)
         self.drop2 = nn.Dropout(dropout_rate)
+
+        self.tcn = tcn(2048, [512], kernel_size=3, dropout=0.4)
+
+        self.attn = nn.Linear(512, 1)
 
         self.fc_class = nn.Linear(512, n_class)
 
-    def forward(self, inputs):
+    def forward(self, inputs, is_training=True):
         # N, L, Cin
         N, L, _ = inputs.shape
-        x = self.relu(self.init_fc(inputs))
-        x = self.drop1(x)  # N, L, 512
+        # x = self.relu(self.init_fc(inputs))
+        # x = self.drop1(x)  # N, L, 512
 
-        x = self.drop2(self.relu(self.refine_fc(x)))
-        x_class_init = self.fc_class(x)  # N, L, cls
+        x = inputs
 
-        w_mean = 0
-        while L != 1:
-            # x = self.drop2(self.relu(self.refine_fc(x)))
-            x = self.drop2(x)
-            wt = self.attn_block(x)  # N, L//2, 2
-            wt = wt.view(N, -1, 1)  # N, L//2 * 2, 1
-            x[:, :L//2 * 2, :] = x[:, :L//2 * 2, :].clone() * wt
+        x = x.transpose(-1, -2)
+        x = self.tcn(x)  # N, 512, L
+        x = x.transpose(-1, -2)  # N, L, 512
 
-            x = x.transpose(-1, -2)
-            x = self.avg_pool(x)
-            x = x.transpose(-1, -2)
-            L = x.shape[-2]
-            w_mean += torch.mean(wt.view(-1)**2)
+        x_a = F.sigmoid(self.attn(x))  # N, L, 1
 
-        w_mean /= (int(np.log2(inputs.shape[-2]))+1)
+        # if is_training:
+        #     x_a = self.drop2(x_a) * (1 - self.dropout_rate)
 
-        x_class = self.fc_class(x)  # N, 1, cls
-        return x_class, x_class_init, w_mean
+        x_class = self.fc_class(x)  # N, L , cls
 
+        x_c = x_class * x_a  # N, L, cls
+
+        x_class_all = nn.AdaptiveAvgPool1d(x_c.transpose(-1, -2)).squeeze()  # N, cls
+
+        return x_class_all, x_c
 
 
 class Model_tcn(torch.nn.Module):
@@ -213,14 +208,6 @@ class Model_tcn(torch.nn.Module):
         x = x_refine.transpose(-1, -2)  # (N, 512, L)
 
         x_max = nn.AdaptiveMaxPool1d(1)(x)  # N, 512, 1
-
-
-        # L = x.shape[-1]
-        # _len = int(np.log2(L))
-        # for i in range(_len):
-        #     x = self.tcn(x)
-        #     x = nn.AdaptiveMaxPool1d(L//2)(x)
-        # x = nn.AdaptiveMaxPool1d(1)(x)
 
         x_cls = x_max.squeeze(-1)  # N, 512
         x_cls = self.conv_class(x_cls)  # N, 20
