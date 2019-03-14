@@ -44,8 +44,6 @@ def milloss(element_logits, batch_size, labels, device):
     return milloss
 
 
-
-
 def train(itr, dataset, args, model, optimizer, logger, device,
           valid=False):
 
