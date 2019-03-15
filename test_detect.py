@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
-from model import Model
+# from model import Model
 from video_dataset import Dataset
 from tensorboard_logger import log_value
 import utils
@@ -77,4 +77,4 @@ def test(itr, dataset, args, model, logger, device, is_detect=True, is_score=Tru
     for item in list(zip(dmap, iou)):
         logger.log_value('Test Detection mAP @ IoU = ' + str(item[1]), item[0], itr)
 
-    utils.write_to_file(args.dataset_name, dmap, cmap, itr)
+    # utils.write_to_file(args.dataset_name, dmap, cmap, itr)

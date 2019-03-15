@@ -3,7 +3,7 @@ import argparse
 import os
 import torch
 import torch.optim as optim
-from model import Model_tcn as Model
+from model import Model_detect as Model
 from video_dataset import Dataset
 from test_detect import test
 from train_detect import train

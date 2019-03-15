@@ -167,18 +167,30 @@ class Model_detect(nn.Module):
         x = self.tcn(x)  # N, 512, L
         x = x.transpose(-1, -2)  # N, L, 512
 
-        x_a = F.sigmoid(self.attn(x))  # N, L, 1
+        # x_a = F.sigmoid(self.attn(x))  # N, L, 1
 
         # if is_training:
         #     x_a = self.drop2(x_a) * (1 - self.dropout_rate)
 
-        x_class = self.fc_class(x)  # N, L , cls
+        # x = x * x_a
 
-        x_c = x_class * x_a  # N, L, cls
+        # x_class = self.fc_class(x)  # N, L , cls
 
-        x_class_all = nn.AdaptiveAvgPool1d(x_c.transpose(-1, -2)).squeeze()  # N, cls
+        # x_c = x_class * x_a  # N, L, cls
 
-        return x_class_all, x_c
+        # x_class_all = nn.AdaptiveMaxPool1d(1)(x_c.transpose(-1, -2))
+        # x_class_all = x_class_all.squeeze()  # N, cls
+
+        x_class = self.fc_class(x)  # N, L, cls
+
+        xx = nn.AdaptiveMaxPool1d(1)(x.transpose(-1, -2))  # N, 512, 1
+        xx = xx.squeeze()  # N, 512
+        x_class_all = self.fc_class(xx)
+
+        # x_class_all = nn.AdaptiveMaxPool1d(1)(x_class.transpose(-1, -2))
+        # x_class_all = x_class_all.squeeze()  # N, cls
+
+        return x_class_all, x_class
 
 
 class Model_tcn(torch.nn.Module):
