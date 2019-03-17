@@ -58,7 +58,7 @@ def train(itr, dataset, args, model, optimizer, logger, device,
 
     model.train()
 
-    x_class, x_a = model(Variable(features))
+    x_class, _ = model(Variable(features))
 
     loss_mil = milloss(x_class, batch_size, labels, device)
 
@@ -83,7 +83,7 @@ def train(itr, dataset, args, model, optimizer, logger, device,
             features = features[:, :np.max(seq_len), :]
             features = torch.from_numpy(features).float().to(device)
             labels = torch.from_numpy(labels).float().to(device)
-            x_class, x_a = model(Variable(features))
+            x_class, _ = model(Variable(features))
 
             loss_mil = milloss(x_class, batch_size, labels, device)
             val_total_loss = loss_mil

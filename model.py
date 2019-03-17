@@ -121,23 +121,6 @@ class AdaptiveBlock(nn.Module):
         return x
 
 
-class ATTN_wt(nn.Module):
-    def __init__(self, n_feature, kernel=2, dropout_rate=0.5):
-        super(ATTN_wt, self).__init__()
-        self.conv1d = nn.Conv1d(n_feature, kernel, kernel_size=kernel,
-                                stride=kernel)
-        self.relu = nn.ReLU()
-        self.softmax = nn.Softmax(dim=-1)
-
-    def forward(self, x):
-        # input N, L, Cin
-        xt = x.transpose(-1, -2)  # N, Cin, L
-        wt = self.relu(self.conv1d(xt))  # N, 2, L//2
-        w = wt.transpose(-1, -2)  # N, L//2, 2
-        w = self.softmax(w)  # N, L//2, 2
-        return w
-
-
 class Model_detect(nn.Module):
     def __init__(self, n_feature, n_class, down_rate=2, dropout_rate=0.5):
         super(Model_detect, self).__init__()
@@ -149,46 +132,37 @@ class Model_detect(nn.Module):
         self.drop1 = nn.Dropout(dropout_rate)
         self.drop2 = nn.Dropout(dropout_rate)
 
-        self.tcn = tcn(2048, [512], kernel_size=3, dropout=0.4)
+        self.tcn = tcn(512, [512], kernel_size=2, dropout=0.4)
 
-        self.attn = nn.Linear(512, 1)
+        layer_list = []
+        for i in range(4):
+            layer_list += [
+                self.tcn,
+                nn.MaxPool1d(2, 2)
+            ]
 
-        self.fc_class = nn.Linear(512, n_class)
+        self.block = nn.Sequential(*layer_list)
+        self.pool = nn.AdaptiveAvgPool1d(1)
+
+        self.fc_class = nn.Linear(512, n_class, bias=False)
 
     def forward(self, inputs, is_training=True):
         # N, L, Cin
         N, L, _ = inputs.shape
-        # x = self.relu(self.init_fc(inputs))
-        # x = self.drop1(x)  # N, L, 512
 
-        x = inputs
+        x = self.init_fc(inputs)  # N, L, 512
+        x = self.drop1(x)
 
-        x = x.transpose(-1, -2)
-        x = self.tcn(x)  # N, 512, L
-        x = x.transpose(-1, -2)  # N, L, 512
+        x = x.transpose(-1, -2)  # N, 512, L
 
-        # x_a = F.sigmoid(self.attn(x))  # N, L, 1
+        x_t = self.block(x)  # N, 512, *
 
-        # if is_training:
-        #     x_a = self.drop2(x_a) * (1 - self.dropout_rate)
+        x_f = self.pool(x_t)  # N, 512, 1
+        x_class_all = self.fc_class(x_f.squeeze(-1))
 
-        # x = x * x_a
+        _weight = self.fc_class.weight.data.transpose(-1, -2)
 
-        # x_class = self.fc_class(x)  # N, L , cls
-
-        # x_c = x_class * x_a  # N, L, cls
-
-        # x_class_all = nn.AdaptiveMaxPool1d(1)(x_c.transpose(-1, -2))
-        # x_class_all = x_class_all.squeeze()  # N, cls
-
-        x_class = self.fc_class(x)  # N, L, cls
-
-        xx = nn.AdaptiveMaxPool1d(1)(x.transpose(-1, -2))  # N, 512, 1
-        xx = xx.squeeze()  # N, 512
-        x_class_all = self.fc_class(xx)
-
-        # x_class_all = nn.AdaptiveMaxPool1d(1)(x_class.transpose(-1, -2))
-        # x_class_all = x_class_all.squeeze()  # N, cls
+        x_class = torch.matmul(x_t.transpose(-1, -2), _weight)
 
         return x_class_all, x_class
 

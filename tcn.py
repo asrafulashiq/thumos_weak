@@ -38,10 +38,10 @@ class TemporalBlock(nn.Module):
         self.init_weights()
 
     def init_weights(self):
-        self.conv1.weight.data.normal_(0, 0.01)
-        self.conv2.weight.data.normal_(0, 0.01)
+        self.conv1.weight.data.normal_(0, 0.001)
+        self.conv2.weight.data.normal_(0, 0.001)
         if self.downsample is not None:
-            self.downsample.weight.data.normal_(0, 0.01)
+            self.downsample.weight.data.normal_(0, 0.001)
 
     def forward(self, x):
         out = self.net(x)
