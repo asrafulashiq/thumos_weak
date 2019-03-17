@@ -58,9 +58,10 @@ def train(itr, dataset, args, model, optimizer, logger, device,
 
     model.train()
 
-    x_class, _ = model(Variable(features))
+    x_class, *_ = model(Variable(features))
 
-    loss_mil = milloss(x_class, batch_size, labels, device)
+    # loss_mil = milloss(x_class, batch_size, labels, device)
+    loss_mil = topk_loss(x_class, seq_len, batch_size, labels, device)
 
     total_loss = loss_mil
     # logger.log_value("train_milloss", loss_mil, itr)
@@ -83,9 +84,11 @@ def train(itr, dataset, args, model, optimizer, logger, device,
             features = features[:, :np.max(seq_len), :]
             features = torch.from_numpy(features).float().to(device)
             labels = torch.from_numpy(labels).float().to(device)
-            x_class, _ = model(Variable(features))
+            x_class, *_ = model(Variable(features))
 
-            loss_mil = milloss(x_class, batch_size, labels, device)
+            # loss_mil = milloss(x_class, batch_size, labels, device)
+            loss_mil = topk_loss(x_class, seq_len, batch_size, labels, device)
+
             val_total_loss = loss_mil
 
             logger.log_value("val_mil_loss", val_total_loss, itr)

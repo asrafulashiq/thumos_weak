@@ -63,15 +63,15 @@ class Model_attn(torch.nn.Module):
             x = self.dropout(x)
 
         # attention
-        x_a = F.relu(self.fc_a1(x))
-        if is_training:
-            x_a = self.dropout(x_a)
-        x_a = self.fc_a2(x_a)
+        # x_a = F.relu(self.fc_a1(x))
+        # if is_training:
+        #     x_a = self.dropout(x_a)
+        # x_a = self.fc_a2(x_a)
 
         # classifier
         x_class = self.classifier(x)
 
-        return x_a, x_class
+        return x_class
 
 
 class TemporalAttention(nn.Module):
