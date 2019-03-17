@@ -111,8 +111,8 @@ class AdaptiveBlock(nn.Module):
     def __init__(self, n_feature, L, dropout_rate=0.5):
         super(AdaptiveBlock, self).__init__()
         self.tcn = tcn(num_inputs=n_feature,
-                        num_channels=[n_feature],
-                        kernel_size=2, dropout=dropout_rate)
+                       num_channels=[n_feature],
+                       kernel_size=2, dropout=dropout_rate)
         self.pool = nn.AdaptiveMaxPool1d(L//2)
 
     def forward(self, x):
@@ -134,15 +134,9 @@ class Model_detect(nn.Module):
 
         self.tcn = tcn(512, [512], kernel_size=2, dropout=0.4)
 
-        layer_list = []
-        for i in range(4):
-            layer_list += [
-                self.tcn,
-                nn.MaxPool1d(2, 2)
-            ]
+        self.maxpool = nn.MaxPool1d(2, 2)
 
-        self.block = nn.Sequential(*layer_list)
-        self.pool = nn.AdaptiveAvgPool1d(1)
+        self.pool = nn.AdaptiveMaxPool1d(1)
 
         self.fc_class = nn.Linear(512, n_class, bias=False)
 
@@ -150,19 +144,23 @@ class Model_detect(nn.Module):
         # N, L, Cin
         N, L, _ = inputs.shape
 
-        x = self.init_fc(inputs)  # N, L, 512
-        x = self.drop1(x)
+        x_in = self.init_fc(inputs)  # N, L, 512
+        x = self.drop1(x_in)
 
         x = x.transpose(-1, -2)  # N, 512, L
 
-        x_t = self.block(x)  # N, 512, *
+        while x.shape[-1] >= 20:
+            x = self.tcn(x)
+            x = self.maxpool(x)
+
+        x_t = x  # N, 512, *
 
         x_f = self.pool(x_t)  # N, 512, 1
         x_class_all = self.fc_class(x_f.squeeze(-1))
 
         _weight = self.fc_class.weight.data.transpose(-1, -2)
 
-        x_class = torch.matmul(x_t.transpose(-1, -2), _weight)
+        x_class = torch.matmul(x_in, _weight)
 
         return x_class_all, x_class
 

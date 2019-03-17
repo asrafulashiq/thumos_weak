@@ -34,6 +34,6 @@ if __name__ == '__main__':
 		train(itr, dataset, args, model, optimizer, logger, device)
 		if  itr % 500 == 0 and not itr == 0:
 			torch.save(model.state_dict(), './ckpt/' + args.model_name + '.pkl')
-		if  itr % 500 == 0 and not itr == 0:
+		if  itr % 100 == 0 and not itr == 0:
 			test(itr, dataset, args, model, logger, device)
 	# test_all(dataset, args, model, device)

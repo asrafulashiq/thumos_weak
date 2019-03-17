@@ -18,10 +18,22 @@ torch.set_default_tensor_type('torch.cuda.FloatTensor')
 def interp(y, N):
     """interpolate x into length N signal
     """
+
+    if len(y.shape) > 1:
+        r, c = y.shape
+        ynew = np.zeros((N, c))
+        for i in range(c):
+            ynew[:, i] = interp(y[:, i], N)
+        return ynew
+
+    if len(y) == N:
+        return y
+
     ind = np.linspace(0, N, len(y)+1, endpoint=False)
     x = [(ind[i]+ind[i+1])/2 for i in range(len(y))]
 
-    f = scipy.interpolate.interp1d(x, y, kind='slinear', fill_value='extrapolate')
+    f = scipy.interpolate.interp1d(x, y, kind='slinear',
+                                   fill_value='extrapolate')
     xnew = np.arange(N)
     ynew = f(xnew)
 
@@ -54,7 +66,12 @@ def test(itr, dataset, args, model, logger, device, is_detect=True, is_score=Tru
         labels_stack.append(labels)
 
         x_a = x_a.squeeze()
-        element_logits_stack.append(x_a.cpu().data.numpy())
+
+        x_a = x_a.cpu().data.numpy()
+
+        x_a = interp(x_a, features.shape[-2])
+
+        element_logits_stack.append(x_a)
 
     instance_logits_stack = np.array(instance_logits_stack)
     labels_stack = np.array(labels_stack)
