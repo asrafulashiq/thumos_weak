@@ -12,6 +12,22 @@ import time
 torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 
+def MILL(element_logits, seq_len, batch_size, labels, device):
+    ''' element_logits should be torch tensor of dimension (B, n_element, n_class),
+         k should be numpy array of dimension (B,) indicating the top k locations to average over,
+         labels should be a numpy array of dimension (B, n_class) of 1 or 0
+         return is a torch tensor of dimension (B, n_class) '''
+
+    k = np.ceil(seq_len/8).astype('int32')
+    labels = labels / torch.sum(labels, dim=1, keepdim=True)
+    instance_logits = torch.zeros(0).to(device)
+    for i in range(batch_size):
+        tmp, _ = torch.topk(element_logits[i][:seq_len[i]], k=int(k[i]), dim=0)
+        instance_logits = torch.cat([instance_logits, torch.mean(tmp, 0, keepdim=True)], dim=0)
+    milloss = -torch.mean(torch.sum(Variable(labels) * F.log_softmax(instance_logits, dim=1), dim=1), dim=0)
+    return milloss
+
+
 def topk_loss(element_logits, seq_len, batch_size, labels, device):
     ''' element_logits should be torch tensor of dimension (B, n_element, n_class),
          k should be numpy array of dimension (B,) indicating the top k locations to average over,
@@ -19,14 +35,11 @@ def topk_loss(element_logits, seq_len, batch_size, labels, device):
          return is a torch tensor of dimension (B, n_class) '''
 
     k = np.ceil(seq_len/8).astype('int32')
-    # labels = labels / torch.sum(labels, dim=1, keepdim=True)
+    labels = labels / torch.sum(labels, dim=1, keepdim=True)
     instance_logits = torch.zeros(0).to(device)
     for i in range(batch_size):
         tmp, _ = torch.topk(element_logits[i][:seq_len[i]], k=int(k[i]), dim=0)
         instance_logits = torch.cat([instance_logits, torch.mean(tmp, 0, keepdim=True)], dim=0)
-    # milloss = F.binary_cross_entropy_with_logits(
-    #     instance_logits, labels
-    # )
     milloss = -torch.mean(
                 torch.sum(Variable(labels) *
                 F.log_softmax(instance_logits, dim=1), dim=-1), dim=0)
@@ -58,7 +71,7 @@ def train(itr, dataset, args, model, optimizer, logger, device,
 
     model.train()
 
-    x_class, *_ = model(Variable(features))
+    x_class = model(Variable(features))
 
     # loss_mil = milloss(x_class, batch_size, labels, device)
     loss_mil = topk_loss(x_class, seq_len, batch_size, labels, device)
@@ -84,7 +97,7 @@ def train(itr, dataset, args, model, optimizer, logger, device,
             features = features[:, :np.max(seq_len), :]
             features = torch.from_numpy(features).float().to(device)
             labels = torch.from_numpy(labels).float().to(device)
-            x_class, *_ = model(Variable(features))
+            x_class = model(Variable(features))
 
             # loss_mil = milloss(x_class, batch_size, labels, device)
             loss_mil = topk_loss(x_class, seq_len, batch_size, labels, device)

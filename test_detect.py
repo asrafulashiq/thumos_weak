@@ -57,21 +57,24 @@ def test(itr, dataset, args, model, logger, device, is_detect=True, is_score=Tru
 
         with torch.no_grad():
             features = features.unsqueeze(0)
-            x_class, x_a = model(Variable(features), is_training=False)
+            x_class = model(Variable(features), is_training=False)
 
         x_class = x_class.squeeze()
-        tmp = F.softmax(x_class, -1)
-        tmp = tmp.cpu().data.numpy()
+        # tmp = F.softmax(x_class, -1)
+        # tmp = tmp.cpu().data.numpy()
+        tmp = F.softmax(torch.mean(torch.topk(x_class, k=int(np.ceil(len(features)/8)), dim=0)[0], dim=0), dim=0).cpu().data.numpy()
         instance_logits_stack.append(tmp)
         labels_stack.append(labels)
 
-        x_a = x_a.squeeze()
+        element_logits = x_class.cpu().data.numpy()
 
-        x_a = x_a.cpu().data.numpy()
+        # x_a = x_a.squeeze()
 
-        x_a = interp(x_a, features.shape[-2])
+        # x_a = x_a.cpu().data.numpy()
 
-        element_logits_stack.append(x_a)
+        # x_a = interp(x_a, features.shape[-2])
+
+        element_logits_stack.append(element_logits)
 
     instance_logits_stack = np.array(instance_logits_stack)
     labels_stack = np.array(labels_stack)

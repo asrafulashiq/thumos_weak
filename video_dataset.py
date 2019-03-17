@@ -44,18 +44,19 @@ class Dataset():
             self.classwiseidx.append(idx)
 
 
-    def load_data(self, n_similar=3, is_training=True):
+    def load_data(self, n_similar=0, is_training=True):
         if is_training==True:
             features = []
             labels = []
             idx = []
 
             # Load similar pairs
-            rand_classid = np.random.choice(len(self.classwiseidx), size=n_similar)
-            for rid in rand_classid:
-                rand_sampleid = np.random.choice(len(self.classwiseidx[rid]), size=2)
-                idx.append(self.classwiseidx[rid][rand_sampleid[0]])
-                idx.append(self.classwiseidx[rid][rand_sampleid[1]])
+            if n_similar != 0:
+                rand_classid = np.random.choice(len(self.classwiseidx), size=n_similar)
+                for rid in rand_classid:
+                    rand_sampleid = np.random.choice(len(self.classwiseidx[rid]), size=2)
+                    idx.append(self.classwiseidx[rid][rand_sampleid[0]])
+                    idx.append(self.classwiseidx[rid][rand_sampleid[1]])
 
             # Load rest pairs
             rand_sampleid = np.random.choice(len(self.trainidx), size=self.batch_size-2*n_similar)

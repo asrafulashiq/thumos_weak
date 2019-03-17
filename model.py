@@ -122,47 +122,51 @@ class AdaptiveBlock(nn.Module):
 
 
 class Model_detect(nn.Module):
-    def __init__(self, n_feature, n_class, down_rate=2, dropout_rate=0.5):
+    def __init__(self, n_feature, n_class, down_rate=2, dropout_rate=0.7):
         super(Model_detect, self).__init__()
-        self.down_rate = down_rate
-        self.dropout_rate = dropout_rate
+        # self.down_rate = down_rate
+        # self.dropout_rate = dropout_rate
 
-        self.init_fc = nn.Linear(n_feature, 512)
-        self.relu = nn.ReLU()
+        self.init_fc = nn.Linear(n_feature, n_feature)
+        # self.relu = nn.ReLU()
         self.drop1 = nn.Dropout(dropout_rate)
-        self.drop2 = nn.Dropout(dropout_rate)
+        # self.drop2 = nn.Dropout(dropout_rate)
 
-        self.tcn = tcn(512, [512], kernel_size=2, dropout=0.4)
+        # self.tcn = tcn(512, [512], kernel_size=2, dropout=0.4)
 
-        self.maxpool = nn.MaxPool1d(2, 2)
+        # self.maxpool = nn.MaxPool1d(2, 2)
 
-        self.pool = nn.AdaptiveMaxPool1d(1)
+        # self.pool = nn.AdaptiveMaxPool1d(1)
 
-        self.fc_class = nn.Linear(512, n_class, bias=False)
+        self.fc_class = nn.Linear(n_feature, n_class)
+
+        self.apply(weights_init)
 
     def forward(self, inputs, is_training=True):
         # N, L, Cin
         N, L, _ = inputs.shape
 
-        x_in = self.init_fc(inputs)  # N, L, 512
+        x_in = F.relu(self.init_fc(inputs))  # N, L, 512
         x = self.drop1(x_in)
 
-        x = x.transpose(-1, -2)  # N, 512, L
+        # x = x.transpose(-1, -2)  # N, 512, L
 
-        while x.shape[-1] >= 20:
-            x = self.tcn(x)
-            x = self.maxpool(x)
+        # while x.shape[-1] >= 20:
+        #     x = self.tcn(x)
+        #     x = self.maxpool(x)
 
-        x_t = x  # N, 512, *
+        # x_t = x  # N, 512, *
 
-        x_f = self.pool(x_t)  # N, 512, 1
-        x_class_all = self.fc_class(x_f.squeeze(-1))
+        # x_f = self.pool(x_t)  # N, 512, 1
+        # x_class_all = self.fc_class(x_f.squeeze(-1))
 
-        _weight = self.fc_class.weight.data.transpose(-1, -2)
+        # _weight = self.fc_class.weight.data.transpose(-1, -2)
 
-        x_class = torch.matmul(x_in, _weight)
+        # x_class = torch.matmul(x_in, _weight)
 
-        return x_class_all, x_class
+        x_class = self.fc_class(x)
+
+        return x_class
 
 
 class Model_tcn(torch.nn.Module):
