@@ -8,3 +8,4 @@ models/*
 ckpt/*
 *.back
 .vscode
+*.log
