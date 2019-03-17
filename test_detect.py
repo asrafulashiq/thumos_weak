@@ -9,9 +9,23 @@ import numpy as np
 from torch.autograd import Variable
 from classificationMAP import getClassificationMAP as cmAP
 from detectionMAP import getDetectionMAP as dmAP
+import scipy
 import scipy.io as sio
 from sklearn.metrics import accuracy_score
 torch.set_default_tensor_type('torch.cuda.FloatTensor')
+
+
+def interp(y, N):
+    """interpolate x into length N signal
+    """
+    ind = np.linspace(0, N, len(y)+1, endpoint=False)
+    x = [(ind[i]+ind[i+1])/2 for i in range(len(y))]
+
+    f = scipy.interpolate.interp1d(x, y, kind='slinear', fill_value='extrapolate')
+    xnew = np.arange(N)
+    ynew = f(xnew)
+
+    return ynew
 
 
 def test(itr, dataset, args, model, logger, device, is_detect=True, is_score=True):
