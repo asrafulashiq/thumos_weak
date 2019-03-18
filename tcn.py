@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.nn.utils import weight_norm
+import torch.nn.init as torch_init
 
 
 class Chomp1d(nn.Module):
@@ -13,6 +14,13 @@ class Chomp1d(nn.Module):
             return x
         else:
             return x[:, :, :-self.chomp_size].contiguous()
+
+
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1 or classname.find('Linear') != -1:
+        torch_init.xavier_uniform_(m.weight)
+        m.bias.data.fill_(0)
 
 
 class TemporalBlock(nn.Module):
@@ -38,10 +46,13 @@ class TemporalBlock(nn.Module):
         self.init_weights()
 
     def init_weights(self):
-        self.conv1.weight.data.normal_(0, 0.001)
-        self.conv2.weight.data.normal_(0, 0.001)
+        # self.conv1.weight.data.normal_(0, 0.001)
+        # self.conv2.weight.data.normal_(0, 0.001)
+        weights_init(self.conv1)
+        weights_init(self.conv2)
         if self.downsample is not None:
-            self.downsample.weight.data.normal_(0, 0.001)
+            # self.downsample.weight.data.normal_(0, 0.001)
+            weights_init(self.downsample)
 
     def forward(self, x):
         out = self.net(x)

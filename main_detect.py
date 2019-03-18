@@ -45,6 +45,6 @@ if __name__ == '__main__':
                 'model_state_dict': model.state_dict()
                 # 'optimizer_state_dict': optimizer.state_dict()
             }, './ckpt/' + args.model_name + '.pkl')
-        if itr % 50 == 0 and not itr == 0:
+        if itr % 100 == 0 and not itr == 0:
             test(itr, dataset, args, model, logger,
                  device, is_detect=True, is_score=False)

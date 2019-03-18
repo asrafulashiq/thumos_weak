@@ -43,9 +43,8 @@ class Dataset():
                         idx.append(i); break;
             self.classwiseidx.append(idx)
 
-
     def load_data(self, n_similar=0, is_training=True):
-        if is_training==True:
+        if is_training == True:
             features = []
             labels = []
             idx = []

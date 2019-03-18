@@ -35,7 +35,7 @@ def topk_loss(element_logits, seq_len, batch_size, labels, device):
          return is a torch tensor of dimension (B, n_class) '''
 
     k = np.ceil(seq_len/8).astype('int32')
-    labels = labels / torch.sum(labels, dim=1, keepdim=True)
+    labels = labels / (torch.sum(labels, dim=1, keepdim=True)+1e-8)
     instance_logits = torch.zeros(0).to(device)
     for i in range(batch_size):
         tmp, _ = torch.topk(element_logits[i][:seq_len[i]], k=int(k[i]), dim=0)

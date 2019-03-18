@@ -1,7 +1,7 @@
 import argparse
 
 parser = argparse.ArgumentParser(description='WTALC')
-parser.add_argument('--lr', type=float, default=0.001,help='learning rate (default: 0.0001)')
+parser.add_argument('--lr', type=float, default=0.0002,help='learning rate (default: 0.0001)')
 parser.add_argument('--batch-size', type=int, default=20, help='number of instances in a batch of data (default: 10)')
 parser.add_argument('--model-name', '-m', default='attn', help='name to save model')
 parser.add_argument('--pretrained-ckpt', '-ckpt', default=None, help='ckpt for pretrained model')

@@ -12,8 +12,11 @@ torch.set_default_tensor_type('torch.cuda.FloatTensor')
 def weights_init(m):
     classname = m.__class__.__name__
     if classname.find('Conv') != -1 or classname.find('Linear') != -1:
-        torch_init.xavier_uniform_(m.weight)
-        m.bias.data.fill_(0)
+        try:
+            torch_init.xavier_uniform_(m.weight)
+            m.bias.data.fill_(0)
+        except AttributeError:
+            pass
 
 
 class Model(torch.nn.Module):
@@ -127,16 +130,10 @@ class Model_detect(nn.Module):
         # self.down_rate = down_rate
         # self.dropout_rate = dropout_rate
 
-        self.init_fc = nn.Linear(n_feature, n_feature)
-        # self.relu = nn.ReLU()
-        self.drop1 = nn.Dropout(dropout_rate)
-        # self.drop2 = nn.Dropout(dropout_rate)
+        # self.init_fc = nn.Linear(n_feature, n_feature)
+        self.tcn = tcn(n_feature, [n_feature], kernel_size=2, dropout=0.6)
 
-        # self.tcn = tcn(512, [512], kernel_size=2, dropout=0.4)
-
-        # self.maxpool = nn.MaxPool1d(2, 2)
-
-        # self.pool = nn.AdaptiveMaxPool1d(1)
+        # self.drop1 = nn.Dropout(dropout_rate)
 
         self.fc_class = nn.Linear(n_feature, n_class)
 
@@ -146,23 +143,13 @@ class Model_detect(nn.Module):
         # N, L, Cin
         N, L, _ = inputs.shape
 
-        x_in = F.relu(self.init_fc(inputs))  # N, L, 512
-        x = self.drop1(x_in)
+        x_in = self.tcn(inputs.transpose(-1, -2))  # N, L, 512
+        x = x_in.transpose(-1, -2)
 
-        # x = x.transpose(-1, -2)  # N, 512, L
+        # x = F.relu(self.init_fc(inputs))
+        # x = self.drop1(x)
 
-        # while x.shape[-1] >= 20:
-        #     x = self.tcn(x)
-        #     x = self.maxpool(x)
-
-        # x_t = x  # N, 512, *
-
-        # x_f = self.pool(x_t)  # N, 512, 1
-        # x_class_all = self.fc_class(x_f.squeeze(-1))
-
-        # _weight = self.fc_class.weight.data.transpose(-1, -2)
-
-        # x_class = torch.matmul(x_in, _weight)
+        # x = self.drop1(x)
 
         x_class = self.fc_class(x)
 
