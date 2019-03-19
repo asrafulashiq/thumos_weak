@@ -131,9 +131,9 @@ class Model_detect(nn.Module):
         # self.dropout_rate = dropout_rate
 
         # self.init_fc = nn.Linear(n_feature, n_feature)
-        self.tcn = tcn(n_feature, [n_feature], kernel_size=2, dropout=0.6)
-
         # self.drop1 = nn.Dropout(dropout_rate)
+
+        self.tcn = tcn(n_feature, [n_feature], kernel_size=2, dropout=0.6)
 
         self.fc_class = nn.Linear(n_feature, n_class)
 
@@ -147,8 +147,6 @@ class Model_detect(nn.Module):
         x = x_in.transpose(-1, -2)
 
         # x = F.relu(self.init_fc(inputs))
-        # x = self.drop1(x)
-
         # x = self.drop1(x)
 
         x_class = self.fc_class(x)

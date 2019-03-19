@@ -69,11 +69,11 @@ def train(itr, dataset, args, model, optimizer, logger, device):
     final_features, element_logits = model(Variable(features))
 
     milloss = MILL(element_logits, seq_len, args.batch_size, labels, device)
-    # casloss = CASL(final_features, element_logits, seq_len, args.num_similar, labels, device)
+    casloss = CASL(final_features, element_logits, seq_len, args.num_similar, labels, device)
 
-    total_loss = milloss
+    # total_loss = milloss
 
-    # total_loss = args.Lambda * milloss + (1-args.Lambda) * casloss
+    total_loss = args.Lambda * milloss + (1-args.Lambda) * casloss
 
     logger.log_value('milloss', milloss, itr)
     # logger.log_value('casloss', casloss, itr)

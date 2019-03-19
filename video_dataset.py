@@ -13,6 +13,7 @@ class Dataset():
         self.features = np.load(self.path_to_features, encoding='bytes')
         self.segments = np.load(self.path_to_annotations + 'segments.npy')
         self.labels = np.load(self.path_to_annotations + 'labels_all.npy')     # Specific to Thumos14
+        self._labels = np.load(self.path_to_annotations + 'labels.npy')
         self.classlist = np.load(self.path_to_annotations + 'classlist.npy')
         self.subset = np.load(self.path_to_annotations + 'subset.npy')
         self.batch_size = args.batch_size
@@ -87,3 +88,10 @@ class Dataset():
             feat = self.features[idx]
             labs = self.labels_multihot[idx]
             yield np.array(feat), np.array(labs)
+
+    def load_one_test_with_segment(self):
+        for idx in self.testidx:
+            feat = self.features[idx]
+            labs = self._labels[idx]
+            seg = self.segments[idx]
+            yield np.array(feat), np.array(labs), np.array(seg)

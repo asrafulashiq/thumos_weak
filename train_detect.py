@@ -12,22 +12,6 @@ import time
 torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 
-def MILL(element_logits, seq_len, batch_size, labels, device):
-    ''' element_logits should be torch tensor of dimension (B, n_element, n_class),
-         k should be numpy array of dimension (B,) indicating the top k locations to average over,
-         labels should be a numpy array of dimension (B, n_class) of 1 or 0
-         return is a torch tensor of dimension (B, n_class) '''
-
-    k = np.ceil(seq_len/8).astype('int32')
-    labels = labels / torch.sum(labels, dim=1, keepdim=True)
-    instance_logits = torch.zeros(0).to(device)
-    for i in range(batch_size):
-        tmp, _ = torch.topk(element_logits[i][:seq_len[i]], k=int(k[i]), dim=0)
-        instance_logits = torch.cat([instance_logits, torch.mean(tmp, 0, keepdim=True)], dim=0)
-    milloss = -torch.mean(torch.sum(Variable(labels) * F.log_softmax(instance_logits, dim=1), dim=1), dim=0)
-    return milloss
-
-
 def topk_loss(element_logits, seq_len, batch_size, labels, device):
     ''' element_logits should be torch tensor of dimension (B, n_element, n_class),
          k should be numpy array of dimension (B,) indicating the top k locations to average over,
@@ -46,7 +30,7 @@ def topk_loss(element_logits, seq_len, batch_size, labels, device):
     return milloss
 
 
-def milloss(element_logits, batch_size, labels, device):
+def milloss(element_logits, labels, device):
     # labels = labels / torch.sum(labels, dim=1, keepdim=True)
     milloss = -torch.mean(
                 torch.sum(Variable(labels) *
@@ -57,8 +41,30 @@ def milloss(element_logits, batch_size, labels, device):
     return milloss
 
 
+def continuity_loss(element_logits, labels, seq_len, batch_size, device):
+    """ element_logits should be torch tensor of dimension (B, n_element, n_class),
+    return is a torch tensor of dimension (B, n_class) """
+
+    labels_var = Variable(labels)
+
+    logit_masked = element_logits * labels_var.unsqueeze(1)  # B, n_el, n_cls
+    logit_masked = logit_masked.to(device)
+    logit_diff = torch.sum(
+        torch.abs((logit_masked[:, 1:, :] - logit_masked[:, :-1, :])),
+        1)  # B, n_cls
+
+    # labels_sum = torch.sum(labels_var, -1, keepdim=True) + 1e-8  # B, 1
+
+    logit_s = logit_diff  # / labels_sum  # B, n_cls
+    logit_s = logit_s / torch.from_numpy(
+        seq_len.astype(np.float32)
+    ).unsqueeze(-1).to(device)
+    c_loss = torch.sum(logit_s) / batch_size
+    return c_loss
+
+
 def train(itr, dataset, args, model, optimizer, logger, device,
-          valid=False):
+          valid=False, scheduler=None):
 
     features, labels = dataset.load_data(n_similar=args.num_similar)
     seq_len = np.sum(np.max(np.abs(features), axis=2) > 0, axis=1)
@@ -75,9 +81,16 @@ def train(itr, dataset, args, model, optimizer, logger, device,
 
     # loss_mil = milloss(x_class, batch_size, labels, device)
     loss_mil = topk_loss(x_class, seq_len, batch_size, labels, device)
+    loss_cont = continuity_loss(x_class, labels, seq_len, batch_size, device)
 
-    total_loss = loss_mil
-    # logger.log_value("train_milloss", loss_mil, itr)
+    total_loss = loss_mil + args.Lambda * loss_cont
+
+    if torch.isnan(total_loss):
+        import pdb
+        pdb.set_trace()
+
+    logger.log_value("train_milloss", loss_mil, itr)
+    logger.log_value("train_cont_loss", loss_cont, itr)
     logger.log_value('train_total_loss', total_loss, itr)
 
     train_loss = total_loss.data.cpu().numpy()
@@ -88,6 +101,9 @@ def train(itr, dataset, args, model, optimizer, logger, device,
     optimizer.zero_grad()
     total_loss.backward()
     optimizer.step()
+
+    if scheduler:
+        scheduler.step()
 
     if valid:
         model.eval()
@@ -101,10 +117,13 @@ def train(itr, dataset, args, model, optimizer, logger, device,
 
             # loss_mil = milloss(x_class, batch_size, labels, device)
             loss_mil = topk_loss(x_class, seq_len, batch_size, labels, device)
-
-            val_total_loss = loss_mil
-
-            logger.log_value("val_mil_loss", val_total_loss, itr)
+            loss_cont = continuity_loss(x_class, labels, seq_len,
+                                        batch_size, device)
+            val_total_loss = loss_mil + args.Lambda * loss_cont
+            # val_total_loss = loss_mil
+            logger.log_value("val_mil_loss", loss_mil, itr)
+            logger.log_value("val_cont_loss", loss_cont, itr)
+            logger.log_value("val_total_loss", val_total_loss, itr)
 
             val_loss = val_total_loss.data.cpu().numpy()
             print('Iteration: %d, Train Loss: %.4f  Valid Loss: %.4f' %

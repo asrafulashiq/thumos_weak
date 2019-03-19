@@ -57,7 +57,7 @@ def test(itr, dataset, args, model, logger, device, is_detect=True, is_score=Tru
 
         with torch.no_grad():
             features = features.unsqueeze(0)
-            x_class = model(Variable(features), is_training=False)
+            x_class = model(Variable(features))
 
         x_class = x_class.squeeze()
         # tmp = F.softmax(x_class, -1)
