@@ -27,6 +27,7 @@ def MILL(element_logits, seq_len, batch_size, labels, device):
     milloss = -torch.mean(torch.sum(Variable(labels) * F.log_softmax(instance_logits, dim=1), dim=1), dim=0)
     return milloss
 
+
 def CASL(x, element_logits, seq_len, n_similar, labels, device):
     ''' x is the torch tensor of feature from the last layer of model of dimension (n_similar, n_element, n_feature),
         element_logits should be torch tensor of dimension (n_similar, n_element, n_class)

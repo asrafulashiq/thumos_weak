@@ -3,8 +3,6 @@ import torch
 from video_dataset import Dataset
 import utils
 import numpy as np
-import options_attn as options
-from model import Model_detect as Model
 import matplotlib.pyplot as plt
 from pathlib import Path
 from collections import defaultdict, deque
@@ -13,8 +11,24 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 from tqdm import tqdm
 import scipy.io as sio
+from scipy.signal import savgol_filter
+
 
 torch.set_default_tensor_type('torch.cuda.FloatTensor')
+
+IS_ORIGINAL = False
+
+if IS_ORIGINAL:
+    from model import Model as Model
+    import options as options
+
+    out_name = "./fig/test_figures_original.pdf"
+
+else:
+    from model import Model_detect as Model
+    import options_attn as options
+
+    out_name = "./fig/test_figures_detect.pdf"
 
 
 def smooth(v):
@@ -30,8 +44,11 @@ def test(features, model, device):
 
     features = torch.from_numpy(features).float().to(device)
     with torch.no_grad():
-        features = features.unsqueeze(0)
-        x_class = model(Variable(features), is_training=False)
+        if IS_ORIGINAL:
+            _, x_class = model(Variable(features), is_training=False)
+        else:
+            features = features.unsqueeze(0)
+            x_class = model(Variable(features), is_training=False)
 
     x_class = x_class.squeeze()
     # tmp = F.softmax(torch.mean(torch.topk(x_class, k=int(np.ceil(len(features)/8)), dim=0)[0], dim=0), dim=0).cpu().data.numpy()
@@ -69,8 +86,10 @@ if __name__ == "__main__":
 
     if args.pretrained_ckpt is not None:
         checkpoint = torch.load(args.pretrained_ckpt)
-        model.load_state_dict(checkpoint['model_state_dict'])
-        # model.load_state_dict(checkpoint)
+        if IS_ORIGINAL:
+            model.load_state_dict(checkpoint)
+        else:
+            model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
 
     total_images = len(dataset.testidx)
@@ -97,6 +116,7 @@ if __name__ == "__main__":
             cls_idx = utils.str2ind(classname, dataset.classlist)
             logit = element_logits[:, cls_idx]
             logit = (logit - np.min(logit))/(np.max(logit)-np.min(logit))
+            logit = smooth(logit)
 
             pred_loc = get_pred_loc(logit)
             pred = np.zeros(len(feat))
@@ -120,4 +140,4 @@ if __name__ == "__main__":
         ax.set_title(",".join([ii[:4] for ii in np.unique(labs)]))
         ax.set_ylim(-0.05, 1.1)
     fig.tight_layout()
-    fig.savefig("./fig/test_figures_detect.pdf")
+    fig.savefig(out_name)

@@ -18,7 +18,7 @@ def smooth(v):
     return savgol_filter(v, l, 2)
 
 
-def filter_segments(segment_predict, videonames, ambilist):
+def filter_segments(segment_predict, pr, ambilist):
     ind = np.zeros(np.shape(segment_predict)[0])
     for i in range(np.shape(segment_predict)[0]):
         vn = videonames[int(segment_predict[i,0])]

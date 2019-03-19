@@ -9,3 +9,6 @@ ckpt/*
 *.back
 .vscode
 *.log
+*.pdf
+*.png
+*.jpg
