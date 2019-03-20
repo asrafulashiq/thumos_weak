@@ -2,6 +2,8 @@ import numpy as np
 import glob
 import utils
 import time
+import random
+
 
 class Dataset():
     def __init__(self, args):
