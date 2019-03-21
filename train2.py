@@ -103,14 +103,21 @@ def CASL_2(x, element_logits, seq_len, labels, device, gt_feat_t):
             torch.norm(Hf1, 2, dim=0) * torch.norm(gt_feat, 2, dim=0)
         )
 
-        d2 = torch.mean(
-            torch.mm(gt_feat_t, Hf1)
-            / (
-                torch.sqrt(torch.mm(gt_feat_t, gt_feat))
-                * torch.sqrt(torch.mm(torch.transpose(Hf1, 0, 1), Hf1))
-            ),
-            0,
-        )
+        mat = torch.mm(gt_feat_t, Hf1) / (
+            torch.sqrt(torch.mm(gt_feat_t, gt_feat))
+            * torch.sqrt(torch.mm(torch.transpose(Hf1, 0, 1), Hf1))
+        ) * (1 - torch.eye(20)).to(device)
+
+        d2 = 1 - torch.max(mat, 0)[0]
+
+        # d2 = 1 - torch.mean(
+        #     torch.mm(gt_feat_t, Hf1)
+        #     / (
+        #         torch.sqrt(torch.mm(gt_feat_t, gt_feat))
+        #         * torch.sqrt(torch.mm(torch.transpose(Hf1, 0, 1), Hf1))
+        #     ),
+        #     0,
+        # )
 
         d3 = 1 - torch.sum(gt_feat * Lf1, dim=0) / (
             torch.norm(gt_feat, 2, dim=0) * torch.norm(Lf1, 2, dim=0)
