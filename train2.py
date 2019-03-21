@@ -114,7 +114,7 @@ def CASL_2(x, element_logits, seq_len, labels, device, gt_feat):
     return sim_loss
 
 
-def train(itr, dataset, args, model, optimizer, logger, device):
+def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
 
     #####
     features = dataset.load_partial()
@@ -159,4 +159,7 @@ def train(itr, dataset, args, model, optimizer, logger, device):
     total_loss.backward()
     # torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
     optimizer.step()
+
+    if scheduler:
+        scheduler.step()
 
