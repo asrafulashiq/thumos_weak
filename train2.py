@@ -117,7 +117,7 @@ def CASL_2(x, element_logits, seq_len, labels, device, gt_feat):
 def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
 
     #####
-    features = dataset.load_partial()
+    features = dataset.load_partial(is_random=True)
     features = torch.from_numpy(features).float().to(device)
     model.train(False)
     gt_features = model(Variable(features), is_tmp=True)

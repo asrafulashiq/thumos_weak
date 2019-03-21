@@ -21,6 +21,7 @@ def test(itr, dataset, args, model, logger, device):
     instance_logits_stack = []
     element_logits_stack = []
     labels_stack = []
+    model.train(False)
     while not done:
         if dataset.currenttestidx % 100 == 0:
             print(
