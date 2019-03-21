@@ -67,9 +67,9 @@ def CASL(x, element_logits, seq_len, n_similar, labels, device):
         )
 
         sim_loss = sim_loss + 0.5 * torch.sum(
-            torch.max(d1 - d2 + 0.5, torch.FloatTensor([0.0]).to(device)) *
-            Variable(labels[i, :]) *
-            Variable(labels[i + 1, :])
+            torch.max(d1 - d2 + 0.5, torch.FloatTensor([0.0]).to(device))
+            * Variable(labels[i, :])
+            * Variable(labels[i + 1, :])
         )
         sim_loss = sim_loss + 0.5 * torch.sum(
             torch.max(d1 - d3 + 0.5, torch.FloatTensor([0.0]).to(device))
@@ -81,7 +81,7 @@ def CASL(x, element_logits, seq_len, n_similar, labels, device):
     return sim_loss
 
 
-def CASL_2(x, element_logits, seq_len, labels, device, gt_feat):
+def CASL_2(x, element_logits, seq_len, labels, device, gt_feat_t):
     """ x is the torch tensor of feature from the last layer of model of
         dimension (n_similar, n_element, n_feature),
         element_logits should be torch tensor of dimension (n_similar, n_element, n_class)
@@ -90,25 +90,42 @@ def CASL_2(x, element_logits, seq_len, labels, device, gt_feat):
 
     sim_loss = 0.0
     n_tmp = 0.0
-    gt_feat = torch.transpose(gt_feat, 0, 1)
+    gt_feat = torch.transpose(gt_feat_t, 0, 1)
     for i in range(0, x.shape[0]):
         atn1 = F.softmax(element_logits[i][: seq_len[i]], dim=0)
 
         n1 = torch.FloatTensor([np.maximum(seq_len[i] - 1, 1)]).to(device)
         Hf1 = torch.mm(torch.transpose(x[i][: seq_len[i]], 1, 0), atn1)
         Lf1 = torch.mm(torch.transpose(x[i][: seq_len[i]], 1, 0), (1 - atn1) / n1)
+        Hf2 = torch.transpose(gt_feat, 0, 1)
 
         d1 = 1 - torch.sum(Hf1 * gt_feat, dim=0) / (
             torch.norm(Hf1, 2, dim=0) * torch.norm(gt_feat, 2, dim=0)
         )
+
+        d2 = torch.mean(
+            torch.mm(gt_feat_t, Hf1)
+            / (
+                torch.sqrt(torch.mm(gt_feat_t, gt_feat))
+                * torch.sqrt(torch.mm(torch.transpose(Hf1, 0, 1), Hf1))
+            ),
+            0,
+        )
+
         d3 = 1 - torch.sum(gt_feat * Lf1, dim=0) / (
             torch.norm(gt_feat, 2, dim=0) * torch.norm(Lf1, 2, dim=0)
         )
 
-        sim_loss = sim_loss + torch.sum(
-            torch.max(d1 - d3 + 0.5, torch.FloatTensor([0.0]).to(device)) *
-            Variable(labels[i, :])
+        sim_loss = sim_loss + 0.5 * torch.sum(
+            torch.max(d1 - d2 + 0.5, torch.FloatTensor([0.0]).to(device))
+            * Variable(labels[i, :])
         )
+
+        sim_loss = sim_loss + 0.5 * torch.sum(
+            torch.max(d1 - d3 + 0.5, torch.FloatTensor([0.0]).to(device))
+            * Variable(labels[i, :])
+        )
+
         n_tmp = n_tmp + torch.sum(Variable(labels[i, :]))
     sim_loss = sim_loss / n_tmp
     return sim_loss
