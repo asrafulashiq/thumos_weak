@@ -89,7 +89,7 @@ def CASL_2(x, element_logits, seq_len, labels, device, gt_feat_t):
         labels should be a numpy array of dimension (B, n_class) of 1 or 0 """
 
     sim_loss = 0.0
-    n_tmp = 0.0
+    # n_tmp = 0.0
     gt_feat = torch.transpose(gt_feat_t, 0, 1)
     for i in range(0, x.shape[0]):
         atn1 = F.softmax(element_logits[i][: seq_len[i]], dim=0)
@@ -106,6 +106,7 @@ def CASL_2(x, element_logits, seq_len, labels, device, gt_feat_t):
         mat = torch.mm(gt_feat_t, Hf1) / (
             torch.sqrt(torch.mm(gt_feat_t, gt_feat))
             * torch.sqrt(torch.mm(torch.transpose(Hf1, 0, 1), Hf1))
+            + 1e-8
         ) * (1 - torch.eye(20)).to(device)
 
         d2 = 1 - torch.max(mat, 0)[0]
@@ -126,16 +127,38 @@ def CASL_2(x, element_logits, seq_len, labels, device, gt_feat_t):
         sim_loss = sim_loss + 0.5 * torch.sum(
             torch.max(d1 - d2 + 0.5, torch.FloatTensor([0.0]).to(device))
             * Variable(labels[i, :])
-        )
+        ) / torch.sum(Variable(labels[i, :]))
 
         sim_loss = sim_loss + 0.5 * torch.sum(
             torch.max(d1 - d3 + 0.5, torch.FloatTensor([0.0]).to(device))
             * Variable(labels[i, :])
-        )
+        ) / torch.sum(Variable(labels[i, :]))
 
-        n_tmp = n_tmp + torch.sum(Variable(labels[i, :]))
-    sim_loss = sim_loss / n_tmp
+        # n_tmp = n_tmp + torch.sum(Variable(labels[i, :]))
+    sim_loss = sim_loss / x.shape[0]
     return sim_loss
+
+
+def continuity_loss(element_logits, labels, seq_len, batch_size, device):
+    """ element_logits should be torch tensor of dimension (B, n_element, n_class),
+    return is a torch tensor of dimension (B, n_class) """
+
+    labels_var = Variable(labels)
+
+    logit_masked = element_logits * labels_var.unsqueeze(1)  # B, n_el, n_cls
+    logit_masked = logit_masked.to(device)
+    logit_diff = torch.sum(
+        torch.abs((logit_masked[:, 1:, :] - logit_masked[:, :-1, :])),
+        1)  # B, n_cls
+
+    # labels_sum = torch.sum(labels_var, -1, keepdim=True) + 1e-8  # B, 1
+
+    logit_s = logit_diff  # / labels_sum  # B, n_cls
+    logit_s = logit_s / torch.from_numpy(
+        seq_len.astype(np.float32)
+    ).unsqueeze(-1).to(device)
+    c_loss = torch.sum(logit_s) / batch_size
+    return c_loss
 
 
 def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
@@ -157,19 +180,21 @@ def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
     final_features, element_logits = model(Variable(features))
 
     milloss = MILL(element_logits, seq_len, args.batch_size, labels, device)
-    # casloss = CASL(final_features, element_logits, seq_len, args.num_similar, labels, device)
-    casloss = CASL_2(
+    casloss = CASL(final_features, element_logits, seq_len, args.num_similar, labels, device)
+    casloss2 = CASL_2(
         final_features, element_logits, seq_len, labels, device, gt_features
     )
 
-    if torch.isnan(casloss).any() or torch.isnan(gt_features).any():
-        import pdb
+    contloss = continuity_loss(element_logits, labels, seq_len, args.batch_size, device)
 
+    if torch.isnan(casloss).any() or torch.isnan(gt_features).any() or \
+            torch.isnan(contloss).any():
+        import pdb
         pdb.set_trace()
 
     # total_loss = milloss
 
-    total_loss = args.Lambda * milloss + (1 - args.Lambda) * casloss
+    total_loss = args.Lambda * milloss + (1 - args.Lambda)/2 * (casloss + casloss2)
 
     logger.log_value("milloss", milloss, itr)
     # logger.log_value('casloss', casloss, itr)

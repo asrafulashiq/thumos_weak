@@ -116,9 +116,17 @@ class Dataset:
             labels = []
             idx = []
 
+            # Load similar pairs
+            if n_similar != 0:
+                rand_classid = np.random.choice(len(self.classwiseidx), size=n_similar)
+                for rid in rand_classid:
+                    rand_sampleid = np.random.choice(len(self.classwiseidx[rid]), size=2)
+                    idx.append(self.classwiseidx[rid][rand_sampleid[0]])
+                    idx.append(self.classwiseidx[rid][rand_sampleid[1]])
+
             # Load rest pairs
-            rand_sampleid = np.random.choice(len(self.trainidx),
-                                             size=self.batch_size)
+            rand_sampleid = np.random.choice(len(self.trainidx), size=self.batch_size-2*n_similar)
+
             for r in rand_sampleid:
                 idx.append(self.trainidx[r])
 

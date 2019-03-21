@@ -45,7 +45,7 @@ if __name__ == "__main__":
     init_itr = 0
 
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
-        optimizer, [1500, 3000, 5000, 15000], 0.5
+        optimizer, [3000, 5000, 10000], 0.5
     )
 
     if args.pretrained_ckpt is not None:
@@ -62,7 +62,7 @@ if __name__ == "__main__":
         # train(itr, dataset, args, model, optimizer, logger, device,
         #       valid=args.valid, scheduler=None)
         train(
-            itr, dataset, args, model, optimizer, logger, device, scheduler=None
+            itr, dataset, args, model, optimizer, logger, device, scheduler=lr_scheduler
         )
         if itr % 500 == 0 and not itr == 0:
             if type(model) == torch.nn.DataParallel:
