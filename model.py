@@ -130,8 +130,8 @@ class Model_detect(nn.Module):
         # self.down_rate = down_rate
         # self.dropout_rate = dropout_rate
 
-        # self.init_fc = nn.Linear(n_feature, n_feature)
-        # self.drop1 = nn.Dropout(dropout_rate)
+        self.init_fc = nn.Linear(n_feature, n_feature)
+        self.drop1 = nn.Dropout(dropout_rate)
 
         self.tcn = tcn(n_feature, [n_feature], kernel_size=2, dropout=0.6)
 
@@ -139,11 +139,16 @@ class Model_detect(nn.Module):
 
         self.apply(weights_init)
 
-    def forward(self, inputs, is_training=True):
+    def forward(self, inputs, is_training=True, is_tmp=False):
         # N, L, Cin
+        if len(inputs.shape) < 3:
+            inputs = inputs.unsqueeze(0)
         N, L, _ = inputs.shape
 
-        x_in = self.tcn(inputs.transpose(-1, -2))  # N, L, 512
+        inputs = self.drop1(F.relu(self.init_fc(inputs)))
+        if is_tmp:
+            return inputs.squeeze()
+        x_in = self.tcn(inputs.transpose(-1, -2))
         x = x_in.transpose(-1, -2)
 
         # x = F.relu(self.init_fc(inputs))
@@ -151,7 +156,7 @@ class Model_detect(nn.Module):
 
         x_class = self.fc_class(x)
 
-        return x_class
+        return inputs, x_class
 
 
 class Model_tcn(torch.nn.Module):

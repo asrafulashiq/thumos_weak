@@ -105,7 +105,7 @@ def CASL_2(x, element_logits, seq_len, labels, device, gt_feat):
             torch.norm(gt_feat, 2, dim=0) * torch.norm(Lf1, 2, dim=0)
         )
 
-        sim_loss = sim_loss + 0.5 * torch.sum(
+        sim_loss = sim_loss + torch.sum(
             torch.max(d1 - d3 + 0.5, torch.FloatTensor([0.0]).to(device)) *
             Variable(labels[i, :])
         )
@@ -126,9 +126,9 @@ def train(itr, dataset, args, model, optimizer, logger, device):
     final_features, element_logits = model(Variable(features))
 
     #####
-    features = dataset.gt_loc_ind
+    features = dataset.load_partial()
     features = torch.from_numpy(features).float().to(device)
-    gt_features, _ = model(Variable(features))
+    gt_features = model(Variable(features), is_tmp=True)
 
     milloss = MILL(element_logits, seq_len, args.batch_size, labels, device)
     # casloss = CASL(final_features, element_logits, seq_len, args.num_similar, labels, device)

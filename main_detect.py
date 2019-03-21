@@ -3,13 +3,14 @@ import argparse
 import os
 import torch
 import torch.optim as optim
-# from model import Model_detect as Model
+
+from model import Model_detect as Model
 # from video_dataset import Dataset
 # from test_detect import test
 # from train_detect import train
 # import options_attn as options
 
-from model import Model
+#from model import Model
 from video_dataset2 import Dataset
 from test import test, test_all
 from train2 import train
@@ -43,7 +44,7 @@ if __name__ == '__main__':
     init_itr = 0
 
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
-        optimizer, [200, 400, 800, 1200, 2000, 3000, 4000, 5000], 0.5
+        optimizer, [3000, 5000, 8000, 12000, 15000], 0.5
     )
 
     if args.pretrained_ckpt is not None:

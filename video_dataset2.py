@@ -4,7 +4,7 @@ import utils
 import time
 import random
 
-random.seed(0)
+np.random.seed(0)
 
 
 class Dataset:
@@ -40,7 +40,7 @@ class Dataset:
 
         self.num_gt = 5
         self.gt_loc_ind = np.zeros(
-            (len(self.classlist), self.feature_size), dtype=np.float32
+            (len(self.classlist), self.num_gt, self.feature_size), dtype=np.float32
         )
         self.train_test_idx()
         self.classwise_feature_mapping()
@@ -66,7 +66,7 @@ class Dataset:
                     if tmp.size == 0:
                         continue
 
-                    self.gt_loc_ind[cls_pos] += np.mean(tmp, 0)
+                    self.gt_loc_ind[cls_pos][cnt] = np.mean(tmp, 0)
                     if np.isnan(self.gt_loc_ind[cls_pos]).any():
                         import pdb
                         pdb.set_trace()
@@ -75,6 +75,16 @@ class Dataset:
                         break
 
             self.gt_loc_ind[cls_pos] = self.gt_loc_ind[cls_pos] / cnt
+
+    def load_partial(self):
+        ind = np.random.choice(
+            range(self.num_gt), size=len(self.classlist), replace=True
+        )
+        feat = self.gt_loc_ind[
+            list(range(len(self.classlist))),
+            ind
+        ]
+        return feat
 
     def train_test_idx(self):
         for i, s in enumerate(self.subset):

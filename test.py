@@ -29,6 +29,7 @@ def test(itr, dataset, args, model, logger, device):
 
         with torch.no_grad():
            _, element_logits = model(Variable(features), is_training=False)
+        element_logits = element_logits.squeeze()
         tmp = F.softmax(torch.mean(torch.topk(element_logits, k=int(np.ceil(len(features)/8)), dim=0)[0], dim=0), dim=0).cpu().data.numpy()
         element_logits = element_logits.cpu().data.numpy()
 
