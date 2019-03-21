@@ -4,15 +4,15 @@ import os
 import torch
 import torch.optim as optim
 
-from model import Model_detect as Model
+# from model import Model_detect as Model
 # from video_dataset import Dataset
 # from test_detect import test
 # from train_detect import train
 # import options_attn as options
 
-#from model import Model
+from model import Model
 from video_dataset2 import Dataset
-from test import test, test_all
+from test import test
 from train2 import train
 import options
 
@@ -71,7 +71,7 @@ if __name__ == '__main__':
                 'model_state_dict': model_state
                 # 'optimizer_state_dict': optimizer.state_dict()
             }, './ckpt/' + args.model_name + '.pkl')
-        if itr % 50 == 0 and not itr == 0:
+        if itr % 100 == 0 and not itr == 0:
             # test(itr, dataset, args, model, logger,
             #      device, is_detect=True, is_score=False)
             test(itr, dataset, args, model, logger, device)

@@ -73,18 +73,24 @@ class Dataset:
                     cnt += 1
                     if cnt >= self.num_gt:
                         break
-
+            if cnt < self.num_gt:
+                import pdb
+                pdb.set_trace()
             self.gt_loc_ind[cls_pos] = self.gt_loc_ind[cls_pos] / cnt
+        self.feat_loc = np.mean(self.gt_loc_ind, axis=1)
 
-    def load_partial(self):
-        ind = np.random.choice(
-            range(self.num_gt), size=len(self.classlist), replace=True
-        )
-        feat = self.gt_loc_ind[
-            list(range(len(self.classlist))),
-            ind
-        ]
-        return feat
+    def load_partial(self, is_random=False):
+        if is_random:
+            ind = np.random.choice(
+                range(self.num_gt), size=len(self.classlist), replace=True
+            )
+            feat = self.gt_loc_ind[
+                list(range(len(self.classlist))),
+                ind
+            ]
+            return feat
+        else:
+            return self.feat_loc
 
     def train_test_idx(self):
         for i, s in enumerate(self.subset):

@@ -30,11 +30,13 @@ class Model(torch.nn.Module):
 
         self.apply(weights_init)
 
-    def forward(self, inputs, is_training=True):
+    def forward(self, inputs, is_training=True, is_tmp=False):
 
         x = F.relu(self.fc(inputs))
         if is_training:
             x = self.dropout(x)
+        if is_tmp:
+            return x
         #x = F.relu(self.fc1(x))
         #if is_training:
         #    x = self.dropout(x)
