@@ -34,7 +34,39 @@ def MILL(element_logits, seq_len, batch_size, labels, device):
     return milloss
 
 
-def CASL(x, element_logits, seq_len, n_similar, labels, device):
+def MILL_2(element_logits, seq_len, batch_size, labels, device, atn):
+    """ element_logits should be torch tensor of dimension (B, n_element, n_class),
+         k should be numpy array of dimension (B,) indicating the top k locations to average over,
+         labels should be a numpy array of dimension (B, n_class) of 1 or 0
+         return is a torch tensor of dimension (B, n_class) """
+
+    k = np.ceil(seq_len / 8).astype("int32")
+    labels = labels / torch.sum(labels, dim=1, keepdim=True)
+    instance_logits = torch.zeros(0).to(device)
+    for i in range(batch_size):
+        # atnb = F.softmax(atn[i][:seq_len[i]], 0)
+        # # tmp, _ = torch.topk(element_logits[i][: seq_len[i]], k=int(k[i]), dim=0)
+        # tmp = element_logits[i][:seq_len[i]] * atnb
+        # instance_logits = torch.cat(
+        #     [instance_logits, torch.sum(tmp, 0, keepdim=True)], dim=0
+        # )
+
+        tmp, _ = torch.topk(
+            element_logits[i][: seq_len[i]] * F.sigmoid(atn[i][: seq_len[i]]),
+            k=int(k[i]),
+            dim=0,
+        )
+        instance_logits = torch.cat(
+            [instance_logits, torch.mean(tmp, 0, keepdim=True)], dim=0
+        )
+    milloss = -torch.mean(
+        torch.sum(Variable(labels) * F.log_softmax(instance_logits, dim=1), dim=1),
+        dim=0,
+    )
+    return milloss
+
+
+def CASL(x, element_logits, seq_len, n_similar, labels, device, atn):
     """ x is the torch tensor of feature from the last layer of model
         of dimension (n_similar, n_element, n_feature),
         element_logits should be torch tensor of dimension (n_similar, n_element, n_class)
@@ -43,6 +75,7 @@ def CASL(x, element_logits, seq_len, n_similar, labels, device):
 
     sim_loss = 0.0
     n_tmp = 0.0
+    element_logits = element_logits * F.sigmoid(atn)
     for i in range(0, n_similar * 2, 2):
         atn1 = F.softmax(element_logits[i][: seq_len[i]], dim=0)
         atn2 = F.softmax(element_logits[i + 1][: seq_len[i + 1]], dim=0)
@@ -81,7 +114,7 @@ def CASL(x, element_logits, seq_len, n_similar, labels, device):
     return sim_loss
 
 
-def CASL_2(x, element_logits, seq_len, labels, device, gt_feat_t):
+def CASL_2(x, element_logits, seq_len, labels, device, gt_feat_t, atn):
     """ x is the torch tensor of feature from the last layer of model of
         dimension (n_similar, n_element, n_feature),
         element_logits should be torch tensor of dimension (n_similar, n_element, n_class)
@@ -91,6 +124,7 @@ def CASL_2(x, element_logits, seq_len, labels, device, gt_feat_t):
     sim_loss = 0.0
     # n_tmp = 0.0
     gt_feat = torch.transpose(gt_feat_t, 0, 1)
+    element_logits = element_logits * F.sigmoid(atn)
     for i in range(0, x.shape[0]):
         atn1 = F.softmax(element_logits[i][: seq_len[i]], dim=0)
 
@@ -103,11 +137,15 @@ def CASL_2(x, element_logits, seq_len, labels, device, gt_feat_t):
             torch.norm(Hf1, 2, dim=0) * torch.norm(gt_feat, 2, dim=0)
         )
 
-        mat = torch.mm(gt_feat_t, Hf1) / (
-            torch.sqrt(torch.mm(gt_feat_t, gt_feat))
-            * torch.sqrt(torch.mm(torch.transpose(Hf1, 0, 1), Hf1))
-            + 1e-8
-        ) * (1 - torch.eye(20)).to(device)
+        mat = (
+            torch.mm(gt_feat_t, Hf1)
+            / (
+                torch.sqrt(torch.mm(gt_feat_t, gt_feat))
+                * torch.sqrt(torch.mm(torch.transpose(Hf1, 0, 1), Hf1))
+                + 1e-8
+            )
+            * (1 - torch.eye(20)).to(device)
+        )
 
         d2 = 1 - torch.max(mat, 0)[0]
 
@@ -148,15 +186,15 @@ def continuity_loss(element_logits, labels, seq_len, batch_size, device):
     logit_masked = element_logits * labels_var.unsqueeze(1)  # B, n_el, n_cls
     logit_masked = logit_masked.to(device)
     logit_diff = torch.sum(
-        torch.abs((logit_masked[:, 1:, :] - logit_masked[:, :-1, :])),
-        1)  # B, n_cls
+        torch.abs((logit_masked[:, 1:, :] - logit_masked[:, :-1, :])), 1
+    )  # B, n_cls
 
     # labels_sum = torch.sum(labels_var, -1, keepdim=True) + 1e-8  # B, 1
 
     logit_s = logit_diff  # / labels_sum  # B, n_cls
-    logit_s = logit_s / torch.from_numpy(
-        seq_len.astype(np.float32)
-    ).unsqueeze(-1).to(device)
+    logit_s = logit_s / torch.from_numpy(seq_len.astype(np.float32)).unsqueeze(-1).to(
+        device
+    )
     c_loss = torch.sum(logit_s) / batch_size
     return c_loss
 
@@ -177,24 +215,26 @@ def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
     features = torch.from_numpy(features).float().to(device)
     labels = torch.from_numpy(labels).float().to(device)
 
-    final_features, element_logits = model(Variable(features))
+    final_features, element_logits, atn = model(Variable(features))
 
-    milloss = MILL(element_logits, seq_len, args.batch_size, labels, device)
-    casloss = CASL(final_features, element_logits, seq_len, args.num_similar, labels, device)
+    milloss = MILL_2(element_logits, seq_len, args.batch_size, labels, device, atn)
+    # casloss = CASL(
+    #     final_features, element_logits, seq_len, args.num_similar, labels, device, atn
+    # )
     casloss2 = CASL_2(
-        final_features, element_logits, seq_len, labels, device, gt_features
+        final_features, element_logits, seq_len, labels, device, gt_features, atn
     )
 
-    contloss = continuity_loss(element_logits, labels, seq_len, args.batch_size, device)
+    # contloss = continuity_loss(element_logits, labels, seq_len, args.batch_size, device)
 
-    if torch.isnan(casloss).any() or torch.isnan(gt_features).any() or \
-            torch.isnan(contloss).any():
-        import pdb
-        pdb.set_trace()
+    # if torch.isnan(casloss).any():
+    #     import pdb
+
+        # pdb.set_trace()
 
     # total_loss = milloss
 
-    total_loss = args.Lambda * milloss + (1 - args.Lambda)/2 * (casloss + casloss2)
+    total_loss = args.Lambda * milloss + (1 - args.Lambda) * (casloss2)
 
     logger.log_value("milloss", milloss, itr)
     # logger.log_value('casloss', casloss, itr)

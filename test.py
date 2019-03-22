@@ -33,21 +33,21 @@ def test(itr, dataset, args, model, logger, device):
         features = torch.from_numpy(features).float().to(device)
 
         with torch.no_grad():
-            _, element_logits = model(Variable(features), is_training=False)
-        element_logits = element_logits.squeeze()
+            _, element_logits, atn = model(Variable(features), is_training=False)
+        # element_logits = element_logits.squeeze()
+
+        topk, _ = torch.topk(element_logits * torch.sigmoid(atn),
+                             k=int(features.shape[0]/8), dim=0)
+
         tmp = (
             F.softmax(
                 torch.mean(
-                    torch.topk(
-                        element_logits, k=int(np.ceil(len(features) / 8)), dim=0
-                    )[0],
-                    dim=0,
-                ),
-                dim=0,
+                    topk, dim=0), dim=0,
             )
             .cpu()
             .data.numpy()
         )
+        element_logits = element_logits * F.sigmoid(atn)
         element_logits = element_logits.cpu().data.numpy()
 
         instance_logits_stack.append(tmp)
