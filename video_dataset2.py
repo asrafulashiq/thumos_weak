@@ -38,7 +38,7 @@ class Dataset:
         ambilist = list(open(ambilist, "r"))
         ambilist = [a.strip("\n").split(" ")[0] for a in ambilist]
 
-        self.num_gt = 5
+        self.num_gt = 2
         self.gt_loc_ind = np.zeros(
             (len(self.classlist), self.num_gt, self.feature_size), dtype=np.float32
         )

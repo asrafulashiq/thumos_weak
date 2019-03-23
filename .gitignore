@@ -12,3 +12,4 @@ ckpt/*
 *.pdf
 *.png
 *.jpg
+tmp_log/

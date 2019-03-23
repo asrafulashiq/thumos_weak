@@ -64,7 +64,7 @@ if __name__ == "__main__":
         train(
             itr, dataset, args, model, optimizer, logger, device, scheduler=lr_scheduler
         )
-        if itr % 500 == 0 and not itr == 0:
+        if itr % 1000 == 0 and not itr == 0:
             if type(model) == torch.nn.DataParallel:
                 model_state = model.module.state_dict()
             else:
@@ -77,7 +77,7 @@ if __name__ == "__main__":
                 },
                 "./ckpt/" + args.model_name + ".pkl",
             )
-        if itr % 100 == 0 and not itr == 0:
+        if itr % 500 == 0 and not itr == 0:
             # test(itr, dataset, args, model, logger,
             #      device, is_detect=True, is_score=False)
             test(itr, dataset, args, model, logger, device)

@@ -1,11 +1,7 @@
-python main_detect.py --max-iter 12000 --lr 0.001 -m fc_test1
-
-python main_detect.py --max-iter 12000 --batch-size 50 --lr 0.0004 -m fc_test2
-
-python main_detect.py --max-iter 12000 --lr 0.0001 -m fc_test3 --Lambda 0.3
-
-python main_detect.py --max-iter 12000 --lr 0.0001 -m fc_test4 --Lambda 0.7
-
-
-python main_detect.py --max-iter 12000 --lr 0.0001 -m fc_test5 --Lambda 0.3
+python main_detect.py --max-iter 10000 -m dis1 --dis 5 > tmp_log/dis_test1.txt
+python main_detect.py --max-iter 10000 -m dis2 --dis 3 > tmp_log/dis_test2.txt
+python main_detect.py --max-iter 10000 -m dis3 --dis 1 > tmp_log/dis_test3.txt
+python main_detect.py --max-iter 10000 -m dis4 --dis 7 > tmp_log/dis_test4.txt
+python main_detect.py --max-iter 10000 -m dis5 --dis 10 > tmp_log/dis_test5.txt
+python main_detect.py --max-iter 10000 -m dis6 --dis 6 > tmp_log/dis_test6.txt
 

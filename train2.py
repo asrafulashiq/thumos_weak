@@ -52,7 +52,7 @@ def MILL_2(element_logits, seq_len, batch_size, labels, device, atn):
         # )
 
         tmp, _ = torch.topk(
-            element_logits[i][: seq_len[i]] * F.sigmoid(atn[i][: seq_len[i]]),
+            element_logits[i][: seq_len[i]] * torch.sigmoid(atn[i][: seq_len[i]]),
             k=int(k[i]),
             dim=0,
         )
@@ -112,6 +112,19 @@ def CASL(x, element_logits, seq_len, n_similar, labels, device, atn):
         n_tmp = n_tmp + torch.sum(Variable(labels[i, :]) * Variable(labels[i + 1, :]))
     sim_loss = sim_loss / n_tmp
     return sim_loss
+
+
+def distance(x, y, m):
+    """ x : n_class, n_feat
+    y : n_class, n_feat """
+    xb = x.unsqueeze(1).repeat((1, x.shape[0], 1))
+    yb = y.unsqueeze(1).repeat((1, y.shape[0], 1)).transpose(0, 1)
+
+    dis = torch.sqrt(torch.sum(torch.pow(xb - yb, 2), -1))
+
+    ndis = (1+np.exp(-m)) / (1 + torch.exp(dis - m))
+
+    return ndis
 
 
 def CASL_2(x, element_logits, seq_len, labels, device, gt_feat_t, atn):
@@ -177,6 +190,77 @@ def CASL_2(x, element_logits, seq_len, labels, device, gt_feat_t, atn):
     return sim_loss
 
 
+def CASL_3(x, element_logits, seq_len, labels, device, gt_feat_t, atn, args):
+    """ x is the torch tensor of feature from the last layer of model of
+        dimension (n_similar, n_element, n_feature),
+        element_logits should be torch tensor of dimension (n_similar, n_element, n_class)
+        seq_len should be numpy array of dimension (B,)
+        labels should be a numpy array of dimension (B, n_class) of 1 or 0 """
+
+    m = args.dis
+    sim_loss = 0.0
+    # n_tmp = 0.0
+    gt_feat = torch.transpose(gt_feat_t, 0, 1)
+    element_logits = element_logits * F.sigmoid(atn)
+
+    bceloss = torch.nn.BCELoss()
+
+    for i in range(0, x.shape[0]):
+        atn1 = F.softmax(element_logits[i][: seq_len[i]], dim=0)
+
+        n1 = torch.FloatTensor([np.maximum(seq_len[i] - 1, 1)]).to(device)
+        Hf1 = torch.mm(torch.transpose(x[i][: seq_len[i]], 1, 0), atn1)
+        Lf1 = torch.mm(torch.transpose(x[i][: seq_len[i]], 1, 0), (1 - atn1) / n1)
+        Hf2 = torch.transpose(gt_feat, 0, 1)
+
+        dis = distance(Hf1.transpose(0, 1), gt_feat_t, m)
+
+        lab = Variable(labels[i, :]).view(-1, 1)
+
+        mask1 = lab * torch.eye(20)
+        mask2 = lab * (1 - torch.eye(20))
+
+        loss1 = - torch.sum(mask1 * torch.log(dis)) / torch.sum(mask1)
+        loss2 = - torch.sum(mask2 * torch.log(1 - dis)) / torch.sum(mask2)
+
+        # d1 = torch.diag(dis)
+
+        # mat = dis * (1 - torch.eye(20)).to(device)
+        # d2 = torch.sum(dis, dim=-1) / 19
+
+        dislf = distance(Lf1.transpose(0, 1), gt_feat_t, m)
+        d3 = torch.diag(dislf)
+
+        # loss1 = -torch.sum(torch.log(d1) * Variable(labels[i, :])) \
+        #     / torch.sum(Variable(labels[i, :]))
+
+        # loss2 = -torch.sum(torch.log(1 - d2) * Variable(labels[i, :])) \
+        #     / torch.sum(Variable(labels[i, :]))
+
+        loss3 = -torch.sum(torch.log(1 - d3) * Variable(labels[i, :])) \
+            / torch.sum(Variable(labels[i, :]))
+
+        sim_loss += 1/3 * (loss1 + loss2 + loss3)
+
+        # sim_loss += 0.4 * torch.sum(d1 * Variable(labels[i, :])) \
+        #     / torch.sum(Variable(labels[i, :]))
+
+        # sim_loss += 0.4 * torch.sum(
+        #     torch.max(
+        #         torch.FloatTensor([0.0]).to(device),
+        #         m - d2
+        #     ) * Variable(labels[i, :])) / torch.sum(Variable(labels[i, :]))
+
+        # sim_loss += 0.4 * torch.sum(
+        #     torch.max(
+        #         torch.FloatTensor([0.0]).to(device),
+        #         m - d3
+        #     ) * Variable(labels[i, :])) / torch.sum(Variable(labels[i, :]))
+
+    sim_loss = sim_loss / x.shape[0]
+    return sim_loss
+
+
 def continuity_loss(element_logits, labels, seq_len, batch_size, device):
     """ element_logits should be torch tensor of dimension (B, n_element, n_class),
     return is a torch tensor of dimension (B, n_class) """
@@ -221,8 +305,8 @@ def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
     # casloss = CASL(
     #     final_features, element_logits, seq_len, args.num_similar, labels, device, atn
     # )
-    casloss2 = CASL_2(
-        final_features, element_logits, seq_len, labels, device, gt_features, atn
+    casloss2 = CASL_3(
+        final_features, element_logits, seq_len, labels, device, gt_features, atn, args
     )
 
     # contloss = continuity_loss(element_logits, labels, seq_len, args.batch_size, device)
