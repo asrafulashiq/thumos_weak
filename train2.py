@@ -370,7 +370,6 @@ def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
 
     optimizer.zero_grad()
     total_loss.backward()
-    # torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
     optimizer.step()
 
     if scheduler:
