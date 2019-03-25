@@ -321,6 +321,15 @@ def continuity_loss(element_logits, labels, seq_len, batch_size, device):
     return c_loss
 
 
+def l1loss(atn, seq_len):
+    loss = 0
+    atn = torch.sigmoid(atn)
+    for i in range(atn.shape[0]):
+        loss += torch.sum(atn[i][:seq_len[i]]) / seq_len[i]
+    loss = loss / atn.shape[0]
+    return loss
+
+
 def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
 
     #####

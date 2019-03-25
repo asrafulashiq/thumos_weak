@@ -1,5 +1,5 @@
 import torch
-# from model import Model
+from model import Model
 from video_dataset import Dataset
 import utils
 import numpy as np
@@ -25,7 +25,7 @@ if IS_ORIGINAL:
     out_name = "./fig/test_figures_original.pdf"
 
 else:
-    from model import Model_detect as Model
+    # from model import Model_detect as Model
     import options_attn as options
 
     out_name = "./fig/test_figures_detect.pdf"
@@ -45,16 +45,19 @@ def test(features, model, device):
     features = torch.from_numpy(features).float().to(device)
     with torch.no_grad():
         if IS_ORIGINAL:
-            _, x_class = model(Variable(features), is_training=False)
+            _, x_class, atn = model(Variable(features), is_training=False)
         else:
-            features = features.unsqueeze(0)
-            x_class = model(Variable(features), is_training=False)
+            # features = features.unsqueeze(0)
+            _, x_class, atn = model(Variable(features), is_training=False)
 
+    # x_class = x_class * torch.sigmoid(atn)
     x_class = x_class.squeeze()
     # tmp = F.softmax(torch.mean(torch.topk(x_class, k=int(np.ceil(len(features)/8)), dim=0)[0], dim=0), dim=0).cpu().data.numpy()
 
+    atn = atn.squeeze()
+    atn = atn.cpu().data.numpy()
     element_logits = x_class.cpu().data.numpy()
-    return element_logits  # vid_len, cls
+    return element_logits, atn  # vid_len, cls
 
 
 def get_pred_loc(x, threshold=0.5):
@@ -107,7 +110,7 @@ if __name__ == "__main__":
     for feat, labs, seg in tqdm(dataset.load_one_test_with_segment()):
         if len(labs) == 0:
             continue
-        element_logits = test(feat, model, device)
+        element_logits, atn = test(feat, model, device)
 
         ax = axes[cnt_ax]
         cnt_ax += 1
@@ -137,6 +140,7 @@ if __name__ == "__main__":
                     linewidth=2)
             ax.plot(pred, color=palette[cls_idx], linestyle=':', linewidth=2)
             ax.plot(logit, color=palette[cls_idx], linewidth=2, alpha=0.3)
+        ax.plot(atn, color=(0, 0, 0), alpha=0.6)
         ax.set_title(",".join([ii[:4] for ii in np.unique(labs)]))
         ax.set_ylim(-0.05, 1.1)
     fig.tight_layout()
