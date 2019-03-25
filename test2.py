@@ -36,7 +36,7 @@ def test(itr, dataset, args, model, logger, device):
             _, element_logits, atn = model(Variable(features), is_training=False)
         # element_logits = element_logits.squeeze()
 
-        topk, _ = torch.topk(element_logits * torch.sigmoid(atn),
+        topk, _ = torch.topk(element_logits,
                              k=int(features.shape[0]/8), dim=0)
 
         tmp = (
@@ -48,7 +48,7 @@ def test(itr, dataset, args, model, logger, device):
             .data.numpy()
         )
         # tmp = F.softmax(torch.sum(element_logits * F.softmax(atn, 0), 0), 0).cpu().data.numpy()
-        element_logits = element_logits * F.sigmoid(atn)
+        element_logits = element_logits  # * F.sigmoid(atn)
         element_logits = element_logits.cpu().data.numpy()
 
         instance_logits_stack.append(tmp)

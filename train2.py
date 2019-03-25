@@ -43,7 +43,7 @@ def MILL_2(element_logits, seq_len, batch_size, labels, device, atn):
     k = np.ceil(seq_len / 8).astype("int32")
     labels = labels / torch.sum(labels, dim=1, keepdim=True)
     instance_logits = torch.zeros(0).to(device)
-    element_logits = element_logits * torch.sigmoid(atn)
+    # element_logits = element_logits * torch.sigmoid(atn)
     for i in range(batch_size):
         # atnb = F.softmax(atn[i][:seq_len[i]], 0)
         # # tmp, _ = torch.topk(element_logits[i][: seq_len[i]], k=int(k[i]), dim=0)
@@ -214,7 +214,7 @@ def CASL_2_like(x, element_logits, seq_len, labels, device, gt_feat_t, atn):
     sim_loss = 0.0
     # n_tmp = 0.0
     gt_feat = torch.transpose(gt_feat_t, 0, 1)
-    element_logits = element_logits * F.sigmoid(atn)
+    # element_logits = element_logits * F.sigmoid(atn)
 
     bceloss = torch.nn.BCELoss()
 
@@ -324,8 +324,13 @@ def continuity_loss(element_logits, labels, seq_len, batch_size, device):
 def l1loss(atn, seq_len):
     loss = 0
     atn = torch.sigmoid(atn)
+    k = np.ceil(seq_len / 8).astype("int32")
     for i in range(atn.shape[0]):
-        loss += torch.sum(atn[i][:seq_len[i]]) / seq_len[i]
+        tmp, _ = torch.topk(
+            atn[i][:seq_len[i]], k=int(k[i]), dim=0
+        )
+        _sum = torch.sum(atn[i][:seq_len[i]]) - torch.sum(tmp)
+        loss += _sum / (seq_len[i] - k[i])
     loss = loss / atn.shape[0]
     return loss
 
@@ -359,11 +364,14 @@ def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
     casloss2 = CASL_2_like(final_features, element_logits, seq_len,
                            labels, device, gt_features, atn)
 
+    # l1_loss = l1loss(atn, seq_len)
+
     # contloss = continuity_loss(element_logits, labels, seq_len, args.batch_size, device)
 
     # total_loss = milloss
 
     total_loss = args.Lambda * milloss + (1 - args.Lambda) * (casloss2)
+        # + (1 - args.Lambda)/2 * l1_loss
 
     if torch.isnan(total_loss):
         import pdb

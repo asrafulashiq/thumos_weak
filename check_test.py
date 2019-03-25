@@ -50,7 +50,7 @@ def test(features, model, device):
             # features = features.unsqueeze(0)
             _, x_class, atn = model(Variable(features), is_training=False)
 
-    # x_class = x_class * torch.sigmoid(atn)
+    x_class = x_class * torch.sigmoid(atn)
     x_class = x_class.squeeze()
     # tmp = F.softmax(torch.mean(torch.topk(x_class, k=int(np.ceil(len(features)/8)), dim=0)[0], dim=0), dim=0).cpu().data.numpy()
 
