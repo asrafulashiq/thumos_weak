@@ -236,21 +236,36 @@ def WLOSS(x, element_logits, gt_feat_t, weight, labels, seq_len, device):
         mask2 = lab * (1 - torch.eye(20))
 
         # loss 1 : <wc, (x_h - g_c)>^2 = 0
-        tmp_dis = torch.abs(torch.mm(weight, x_h - gt_feat))
+        tmp_dis = torch.pow(torch.mm(weight, x_h - gt_feat), 2)
         loss1 = torch.sum(tmp_dis * mask1) / torch.sum(mask1)  # this should be zero
 
-        tmp_gt = 1 - torch.sigmoid(torch.mm(weight, gt_feat))
-        loss1g = torch.sum(tmp_gt * mask1) / torch.sum(mask1)
+        # tmp_gt = 1 - torch.sigmoid(torch.mm(weight, gt_feat))
+        # loss1g = torch.sum(tmp_gt * mask1) / torch.sum(mask1)
 
-        # loss 2: <wc, x_l> = -inf
-        tmp_l = torch.sigmoid(torch.mm(weight, x_l))
-        loss2 = torch.sum(tmp_l * mask1) / torch.sum(mask1)  # this should be zero
+        # # loss 2: <wc, x_l> = -inf
+        # tmp_l = torch.sigmoid(torch.mm(weight, x_l))
+        # loss2 = torch.sum(tmp_l * mask1) / torch.sum(mask1)  # this should be zero
 
         # loss 3: <wc, x_l - g_c> = -inf
         # tmp_c = torch.sigmoid(torch.mm(weight, x_l - gt_feat))
         # loss3 = torch.sum(tmp_c * mask1) / torch.sum(mask1)  # this should be zero
 
-        sim_loss += 1/3 * (loss1 + loss1g + loss2)
+        # <wc, xh> = +inf
+        tmp1 = 1 - torch.sigmoid(torch.mm(weight, x_h))
+        l1 = torch.sum(tmp1 * mask1) / torch.sum(mask1)
+
+        # <wc, gc> = +inf
+        tmp2 = 1 - torch.sigmoid(torch.mm(weight, gt_feat))
+        l2 = torch.sum(tmp2 * mask1) / torch.sum(mask1)
+
+        # <wc, xl> = -inf
+        tmp3 = torch.sigmoid(torch.mm(weight, x_l))
+        l3 = torch.sum(tmp3 * mask1) / torch.sum(mask1)
+
+        # <wc, g!=c> = -inf
+        l4 = torch.sum((1-tmp2) * mask2) / torch.sum(mask2)
+
+        sim_loss += 1/4 * (l1 + l2 + l3 + l4 + loss1)
 
     sim_loss /= element_logits.shape[0]
     return sim_loss
