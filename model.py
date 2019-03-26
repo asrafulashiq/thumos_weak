@@ -16,7 +16,7 @@ def weights_init(m):
             torch_init.xavier_uniform_(m.weight)
             m.bias.data.fill_(0)
         except AttributeError:
-            raise AttributeError
+            pass
 
 
 class Model(torch.nn.Module):
@@ -25,10 +25,10 @@ class Model(torch.nn.Module):
 
         self.fc = nn.Linear(n_feature, n_feature)
         # self.fc1 = nn.Linear(n_feature, n_feature)
-        self.classifier = nn.Linear(n_feature, n_class)
+        self.classifier = nn.Linear(n_feature, n_class, bias=False)
         self.dropout = nn.Dropout(0.7)
 
-        self.atn = nn.Linear(n_feature, 1)
+        # self.atn = nn.Linear(n_feature, 1)
 
         self.apply(weights_init)
 
@@ -40,12 +40,12 @@ class Model(torch.nn.Module):
         if is_tmp:
             return x
 
-        atn = F.sigmoid(self.atn(x))
+        # atn = F.sigmoid(self.atn(x))
 
         #x = F.relu(self.fc1(x))
         #if is_training:
         #    x = self.dropout(x)
-        return x, self.classifier(x), atn
+        return x, self.classifier(x)
 
 
 class Model_attn(torch.nn.Module):

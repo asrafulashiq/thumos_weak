@@ -109,7 +109,7 @@ def getLocMAP(predictions, th, annotation_path):
         [pp[:, i].sort() for i in range(np.shape(pp)[1])]
         pp = -pp
         c_s = np.mean(pp[: int(np.shape(pp)[0] / 8), :], axis=0)
-        ind = c_s > 0.0
+        ind = c_s > -10
         c_score.append(c_s)
         # new_pred = np.zeros((np.shape(p)[0],np.shape(p)[1]), dtype='float32')
         predictions_mod.append(p * ind)

@@ -12,8 +12,8 @@ import torch.optim as optim
 
 from model import Model
 from video_dataset2 import Dataset
-from test import test
-from train2 import train
+from test2 import test
+from train3 import train
 import options
 
 
@@ -64,7 +64,7 @@ if __name__ == "__main__":
         train(
             itr, dataset, args, model, optimizer, logger, device, scheduler=lr_scheduler
         )
-        if itr % 1000 == 0 and not itr == 0:
+        if itr % 100 == 0 and not itr == 0:
             if type(model) == torch.nn.DataParallel:
                 model_state = model.module.state_dict()
             else:
