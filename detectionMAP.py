@@ -5,17 +5,20 @@ import sys
 import scipy.io as sio
 
 
+np.random.seed(0)
+
+
 def str2ind(categoryname, classlist):
     return [i for i in range(len(classlist)) if categoryname == classlist[i]][0]
 
 
-def smooth(v):
+def smooth(v, order=2):
     # return v
-    l = min(3, len(v))
+    l = min(order + 1, len(v))
     l = l - (1 - l % 2)
-    if len(v) <= 3:
+    if len(v) <= order:
         return v
-    return savgol_filter(v, l, 2)
+    return savgol_filter(v, l, order)
 
 
 def filter_segments(segment_predict, videonames, ambilist):
@@ -109,7 +112,7 @@ def getLocMAP(predictions, th, annotation_path):
         [pp[:, i].sort() for i in range(np.shape(pp)[1])]
         pp = -pp
         c_s = np.mean(pp[: int(np.shape(pp)[0] / 8), :], axis=0)
-        ind = c_s > -10
+        ind = c_s > -13
         c_score.append(c_s)
         # new_pred = np.zeros((np.shape(p)[0],np.shape(p)[1]), dtype='float32')
         predictions_mod.append(p * ind)

@@ -28,16 +28,16 @@ else:
     # from model import Model_detect as Model
     import options_attn as options
 
-    out_name = "./fig/test_figures_detect.pdf"
+    out_name = "./fig/test_figures_detect_sig.pdf"
 
 
-def smooth(v):
+def smooth(v, order=10):
     # return v
-    l = min(3, len(v))
+    l = min(order + 1, len(v))
     l = l - (1 - l % 2)
-    if len(v) <= 3:
+    if len(v) <= order:
         return v
-    return savgol_filter(v, l, 2)
+    return savgol_filter(v, l, order)
 
 
 def test(features, model, device):
@@ -48,19 +48,16 @@ def test(features, model, device):
             _, x_class, atn = model(Variable(features), is_training=False)
         else:
             # features = features.unsqueeze(0)
-            _, x_class, atn = model(Variable(features), is_training=False)
+            _, x_class = model(Variable(features), is_training=False)
 
-    x_class = x_class * torch.sigmoid(atn)
     x_class = x_class.squeeze()
-    # tmp = F.softmax(torch.mean(torch.topk(x_class, k=int(np.ceil(len(features)/8)), dim=0)[0], dim=0), dim=0).cpu().data.numpy()
 
-    atn = atn.squeeze()
-    atn = atn.cpu().data.numpy()
+    x_class = torch.sigmoid(x_class)
     element_logits = x_class.cpu().data.numpy()
-    return element_logits, atn  # vid_len, cls
+    return element_logits  # vid_len, cls
 
 
-def get_pred_loc(x, threshold=0.5):
+def get_pred_loc(x, threshold=0.1):
     pred_loc = []
     vid_pred = np.concatenate(
         [np.zeros(1), (x > threshold).astype('float32'), np.zeros(1)],
@@ -70,7 +67,7 @@ def get_pred_loc(x, threshold=0.5):
     s = [idk for idk, item in enumerate(vid_pred_diff) if item == 1]
     e = [idk for idk, item in enumerate(vid_pred_diff) if item == -1]
     for j in range(len(s)):
-        if e[j] - s[j] >= 2:
+        if e[j] - s[j] >= 1:
             pred_loc.append((s[j], e[j]))
     return pred_loc
 
@@ -110,7 +107,7 @@ if __name__ == "__main__":
     for feat, labs, seg in tqdm(dataset.load_one_test_with_segment()):
         if len(labs) == 0:
             continue
-        element_logits, atn = test(feat, model, device)
+        element_logits = test(feat, model, device)
 
         ax = axes[cnt_ax]
         cnt_ax += 1
@@ -136,11 +133,13 @@ if __name__ == "__main__":
                 e = int(round(_seg[1]*25/16))
                 gt[s:e+1] = 1
 
-            ax.plot(gt, color=palette[cls_idx], linestyle='dashed',
-                    linewidth=2)
-            ax.plot(pred, color=palette[cls_idx], linestyle=':', linewidth=2)
-            ax.plot(logit, color=palette[cls_idx], linewidth=2, alpha=0.3)
-        ax.plot(atn, color=(0, 0, 0), alpha=0.6)
+            ax.plot(gt, color=palette[cls_idx], linestyle='-',
+                    linewidth=2, alpha=0.4)
+            ax.plot(pred, color=palette[cls_idx], linestyle='-.', linewidth=2)
+            # ax.plot(logit, color=palette[cls_idx], linewidth=2)
+        # ax.plot(atn, color=(0, 0, 0), alpha=0.6)
+        ax.grid(True)
+        ax.set_yticks([0, 0.2, 0.4, 0.5, 0.6, 0.8])
         ax.set_title(",".join([ii[:4] for ii in np.unique(labs)]))
         ax.set_ylim(-0.05, 1.1)
     fig.tight_layout()

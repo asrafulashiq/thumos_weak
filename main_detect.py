@@ -40,8 +40,8 @@ if __name__ == "__main__":
     #     model = torch.nn.DataParallel(model)
     model = model.to(device)
 
-    # optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.0005)
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, weight_decay=0.0005)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.0005)
+    # optimizer = optim.SGD(model.parameters(), lr=args.lr, weight_decay=0.0005)
     init_itr = 0
 
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(

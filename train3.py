@@ -222,6 +222,7 @@ def WLOSS_orig(x, element_logits, weight, labels, n_similar, seq_len, device):
 
     sim_loss = 0.0
     n_tmp = 0.0
+    sig = 2.5
     for i in range(0, n_similar * 2, 2):
         atn1 = F.softmax(element_logits[i][: seq_len[i]], dim=0)
         atn2 = F.softmax(element_logits[i + 1][: seq_len[i + 1]], dim=0)
@@ -245,22 +246,22 @@ def WLOSS_orig(x, element_logits, weight, labels, n_similar, seq_len, device):
 
         tmp = 1/2 * (torch.mm(weight, xh1) + torch.mm(weight, xh2))
         l2 = torch.sum(
-            torch.max(3 - tmp, torch.FloatTensor([0.0]).to(device))
+            torch.max(sig - tmp, torch.FloatTensor([0.0]).to(device))
             * mask1
         ) / torch.sum(mask1)
 
         l3 = torch.sum(
-            torch.max(tmp + 3, torch.FloatTensor([0.0]).to(device))
+            torch.max(tmp + sig, torch.FloatTensor([0.0]).to(device))
             * mask2
         ) / torch.sum(mask2)
 
         tmp = 1/2 * (torch.mm(weight, xl1) + torch.mm(weight, xl2))
         l4 = torch.sum(
-            torch.max(tmp + 3, torch.FloatTensor([0.0]).to(device))
+            torch.max(tmp + sig, torch.FloatTensor([0.0]).to(device))
             * mask1
         ) / torch.sum(mask1)
 
-        sim_loss += (l2 + l3 + l4)
+        sim_loss += 1/3 * (l2 + l3 + l4)
 
     sim_loss = sim_loss / x.shape[0]
     return sim_loss
@@ -270,7 +271,7 @@ def WLOSS(x, element_logits, gt_feat_t, weight, labels, seq_len, device):
 
     gt_feat = torch.transpose(gt_feat_t, 0, 1)
     sim_loss = 0
-    sig = 2
+    sig = 2.5
     for i in range(element_logits.shape[0]):
         atn1 = F.softmax(element_logits[i][: seq_len[i]], dim=0)
 
@@ -370,7 +371,7 @@ def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
 
     weight = model.classifier.weight
     # casloss = WLOSS_orig(final_features, element_logits, weight, labels, args.num_similar,
-    #                       seq_len, device)
+    #                      seq_len, device)
 
     casloss2 = WLOSS(final_features, element_logits, gt_features, weight, labels,
                      seq_len, device)
