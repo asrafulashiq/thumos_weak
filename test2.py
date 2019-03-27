@@ -8,7 +8,7 @@ import utils
 import numpy as np
 from torch.autograd import Variable
 from classificationMAP import getClassificationMAP as cmAP
-from detectionMAP import getDetectionMAP as dmAP
+from detectionMAP2 import getDetectionMAP as dmAP
 import scipy.io as sio
 from sklearn.metrics import accuracy_score
 
