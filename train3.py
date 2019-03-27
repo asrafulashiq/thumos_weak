@@ -315,7 +315,7 @@ def WLOSS(x, element_logits, gt_feat_t, weight, labels, seq_len, device):
         mask2 = lab * (1 - torch.eye(20))
 
         # loss 1 : <wc, (x_h - g_c)>^2 = 0
-        tmp_dis = torch.pow(torch.mm(weight, x_h - gt_feat), 2)
+        tmp_dis = torch.abs(torch.mm(weight, x_h - gt_feat))
         tmp_dis = (1+np.exp(-m)) / (1 + torch.exp(tmp_dis - m))
         loss1 = torch.sum(-torch.log(tmp_dis + eps) * mask1) / torch.sum(mask1)
         # this should be zero
