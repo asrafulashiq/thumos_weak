@@ -61,14 +61,14 @@ if __name__ == "__main__":
     if args.test:
         test(init_itr, dataset, args, model, logger, device)
         raise SystemExit
-
+    best_dmap_itr = (0, init_itr)
     for itr in range(init_itr, args.max_iter):
         # train(itr, dataset, args, model, optimizer, logger, device,
         #       valid=args.valid, scheduler=None)
         train(
             itr, dataset, args, model, optimizer, logger, device, scheduler=lr_scheduler
         )
-        if itr % 100 == 0 and not itr == 0:
+        if itr % 200 == 0 and not itr == 0:
             if type(model) == torch.nn.DataParallel:
                 model_state = model.module.state_dict()
             else:
@@ -81,7 +81,12 @@ if __name__ == "__main__":
                 },
                 "./ckpt/" + args.model_name + ".pkl",
             )
-        if itr % 50 == 0 and not itr == 0:
+        if itr % 100 == 0 and not itr == 0:
             # test(itr, dataset, args, model, logger,
             #      device, is_detect=True, is_score=False)
-            test(itr, dataset, args, model, logger, device)
+            dmap = test(itr, dataset, args, model, logger, device)
+            if dmap > best_dmap_itr[0]:
+                best_dmap_itr = (dmap, itr)
+
+    print()
+    print(f"Best Detection mAP : {best_dmap_itr[0]:.3f} @iter {best_dmap_itr[1]}")
