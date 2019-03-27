@@ -8,6 +8,10 @@ import scipy.io as sio
 np.random.seed(0)
 
 
+def sigmoid(x, eps=1e-10):
+    return 1/(1+np.exp(-x) + eps)
+
+
 def str2ind(categoryname, classlist):
     return [i for i in range(len(classlist)) if categoryname == classlist[i]][0]
 
@@ -112,9 +116,8 @@ def getLocMAP(predictions, th, annotation_path):
         [pp[:, i].sort() for i in range(np.shape(pp)[1])]
         pp = -pp
         c_s = np.mean(pp[: int(np.shape(pp)[0] / 8), :], axis=0)
-        ind = c_s > -2
+        ind = c_s > 0
         c_score.append(c_s)
-        # new_pred = np.zeros((np.shape(p)[0],np.shape(p)[1]), dtype='float32')
         predictions_mod.append(p * ind)
     predictions = predictions_mod
 
@@ -129,7 +132,10 @@ def getLocMAP(predictions, th, annotation_path):
         # Get list of all predictions for class c
         for i in range(len(predictions)):
             tmp = smooth(predictions[i][:, c])
-            threshold = np.max(tmp) - (np.max(tmp) - np.min(tmp)) * 0.5
+            # tmp = sigmoid(tmp)
+            threshold = np.max(tmp) - (np.max(tmp) - np.min(tmp)) * 0.6
+            # threshold = -2
+            # threshold = 0.3
             vid_pred = np.concatenate(
                 [np.zeros(1), (tmp > threshold).astype("float32"), np.zeros(1)], axis=0
             )

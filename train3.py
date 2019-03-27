@@ -301,7 +301,7 @@ def WLOSS(x, element_logits, gt_feat_t, weight, labels, seq_len, device):
     sim_loss = 0
     sig = 2.5
     eps = 1e-10
-    m = 5
+    m = 2
     for i in range(element_logits.shape[0]):
         atn1 = F.softmax(element_logits[i][: seq_len[i]], dim=0)
 
@@ -409,7 +409,7 @@ def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
     casloss2 = WLOSS(final_features, element_logits, gt_features, weight, labels,
                      seq_len, device)
 
-    total_loss = args.Lambda * milloss + (1 - args.Lambda) * (casloss2)
+    total_loss = args.Lambda * milloss #+ (1 - args.Lambda) * (casloss2)
 
     if torch.isnan(total_loss):
         import pdb

@@ -40,13 +40,13 @@ def test(itr, dataset, args, model, logger, device):
                              k=int(features.shape[0]/8), dim=0)
 
         tmp = (
-            F.softmax(
-                torch.mean(
-                    topk, dim=0), dim=0,
+            torch.sigmoid(
+                torch.mean(topk, dim=0),
             )
             .cpu()
             .data.numpy()
         )
+        # element_logits = torch.sigmoid(element_logits)
         element_logits = element_logits.cpu().data.numpy()
 
         instance_logits_stack.append(tmp)
