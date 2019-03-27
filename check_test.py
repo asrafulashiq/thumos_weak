@@ -26,9 +26,9 @@ if IS_ORIGINAL:
 
 else:
     # from model import Model_detect as Model
-    import options_attn as options
+    import options as options
 
-    out_name = "./fig/test_figures_detect_sig.pdf"
+    out_name = "./fig/test_figures_detect.pdf"
 
 
 def smooth(v, order=10):
@@ -52,7 +52,7 @@ def test(features, model, device):
 
     x_class = x_class.squeeze()
 
-    x_class = torch.sigmoid(x_class)
+    # x_class = torch.sigmoid(x_class)
     element_logits = x_class.cpu().data.numpy()
     return element_logits  # vid_len, cls
 
@@ -67,7 +67,7 @@ def get_pred_loc(x, threshold=0.1):
     s = [idk for idk, item in enumerate(vid_pred_diff) if item == 1]
     e = [idk for idk, item in enumerate(vid_pred_diff) if item == -1]
     for j in range(len(s)):
-        if e[j] - s[j] >= 1:
+        if e[j] - s[j] >= 0:
             pred_loc.append((s[j], e[j]))
     return pred_loc
 
@@ -115,10 +115,12 @@ if __name__ == "__main__":
         for classname in np.unique(labs):
             cls_idx = utils.str2ind(classname, dataset.classlist)
             logit = element_logits[:, cls_idx]
+            logit[logit < 0] = 0
+            logit[logit > 2] = 2
             logit = (logit - np.min(logit))/(np.max(logit)-np.min(logit))
             logit = smooth(logit)
 
-            pred_loc = get_pred_loc(logit)
+            pred_loc = get_pred_loc(logit, threshold=0.2)
             pred = np.zeros(len(feat))
 
             for _loc in pred_loc:
@@ -135,7 +137,7 @@ if __name__ == "__main__":
 
             ax.plot(gt, color=palette[cls_idx], linestyle='-',
                     linewidth=2, alpha=0.4)
-            ax.plot(pred, color=palette[cls_idx], linestyle='-.', linewidth=2)
+            ax.plot(pred, color=palette[cls_idx], linestyle='-.', linewidth=2, alpha=0.4)
             # ax.plot(logit, color=palette[cls_idx], linewidth=2)
         # ax.plot(atn, color=(0, 0, 0), alpha=0.6)
         ax.grid(True)

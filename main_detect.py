@@ -58,11 +58,15 @@ if __name__ == "__main__":
             optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         init_itr = checkpoint["itr"]
 
+    if args.test:
+        test(init_itr, dataset, args, model, logger, device)
+        raise SystemExit
+
     for itr in range(init_itr, args.max_iter):
         # train(itr, dataset, args, model, optimizer, logger, device,
         #       valid=args.valid, scheduler=None)
         train(
-            itr, dataset, args, model, optimizer, logger, device, scheduler=None
+            itr, dataset, args, model, optimizer, logger, device, scheduler=lr_scheduler
         )
         if itr % 100 == 0 and not itr == 0:
             if type(model) == torch.nn.DataParallel:

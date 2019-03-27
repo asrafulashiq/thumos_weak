@@ -116,7 +116,7 @@ def getLocMAP(predictions, th, annotation_path):
         [pp[:, i].sort() for i in range(np.shape(pp)[1])]
         pp = -pp
         c_s = np.mean(pp[: int(np.shape(pp)[0] / 8), :], axis=0)
-        ind = c_s > 0
+        ind = c_s > 0.
         c_score.append(c_s)
         predictions_mod.append(p * ind)
     predictions = predictions_mod
@@ -132,10 +132,15 @@ def getLocMAP(predictions, th, annotation_path):
         # Get list of all predictions for class c
         for i in range(len(predictions)):
             tmp = smooth(predictions[i][:, c])
+            if np.isnan(tmp).any():
+                import pdb; pdb.set_trace()
             # tmp = sigmoid(tmp)
+            # tmp[tmp < -10] = -10
+            # tmp[tmp > 5] = 5
+            # tmp = (tmp - np.min(tmp))/(np.max(tmp)-np.min(tmp)+1e-10)
             threshold = np.max(tmp) - (np.max(tmp) - np.min(tmp)) * 0.6
             # threshold = -2
-            # threshold = 0.3
+            # threshold = 0.4
             vid_pred = np.concatenate(
                 [np.zeros(1), (tmp > threshold).astype("float32"), np.zeros(1)], axis=0
             )
@@ -146,9 +151,9 @@ def getLocMAP(predictions, th, annotation_path):
             e = [idk for idk, item in enumerate(vid_pred_diff) if item == -1]
             for j in range(len(s)):
                 aggr_score = np.max(tmp[s[j] : e[j]]) + 0.7 * c_score[i][c]
-                if e[j] - s[j] >= 2:
+                if e[j] - s[j] >= 0:
                     segment_predict.append(
-                        [i, s[j], e[j], np.max(tmp[s[j] : e[j]]) + 0.7 * c_score[i][c]]
+                        [i, s[j], e[j], np.max(tmp[s[j]: e[j]]) + 0. * c_score[i][c]]
                     )
                     detection_results[i].append(
                         [
