@@ -250,19 +250,26 @@ def WLOSS_orig(x, element_logits, weight, labels, n_similar, seq_len, device):
 
     sim_loss = 0.0
     n_tmp = 0.0
-    sig = 2.5
+    sig = 2
+    m = 2
     for i in range(0, n_similar * 2, 2):
         atn1 = F.softmax(element_logits[i][: seq_len[i]], dim=0)
         atn2 = F.softmax(element_logits[i + 1][: seq_len[i + 1]], dim=0)
+
+        atn1_l = F.softmin(element_logits[i][: seq_len[i]], dim=0)
+        atn2_l = F.softmin(element_logits[i + 1][: seq_len[i + 1]], dim=0)
 
         n1 = torch.FloatTensor([np.maximum(seq_len[i] - 1, 1)]).to(device)
         n2 = torch.FloatTensor([np.maximum(seq_len[i + 1] - 1, 1)]).to(device)
         xh1 = torch.mm(torch.transpose(x[i][: seq_len[i]], 1, 0), atn1)
         xh2 = torch.mm(torch.transpose(x[i + 1][: seq_len[i + 1]], 1, 0), atn2)
-        xl1 = torch.mm(torch.transpose(x[i][: seq_len[i]], 1, 0), (1 - atn1) / n1)
+        # xl1 = torch.mm(torch.transpose(x[i][: seq_len[i]], 1, 0), (1 - atn1) / n1)
+        # xl2 = torch.mm(
+        #     torch.transpose(x[i + 1][: seq_len[i + 1]], 1, 0), (1 - atn2) / n2
+        # )
+        xl1 = torch.mm(torch.transpose(x[i][: seq_len[i]], 1, 0), atn1_l)
         xl2 = torch.mm(
-            torch.transpose(x[i + 1][: seq_len[i + 1]], 1, 0), (1 - atn2) / n2
-        )
+            torch.transpose(x[i + 1][: seq_len[i + 1]], 1, 0), atn2_l)
 
         lab = Variable(labels[i, :] * labels[i+1, :]).view(-1, 1)
 
@@ -270,7 +277,9 @@ def WLOSS_orig(x, element_logits, weight, labels, n_similar, seq_len, device):
         mask2 = lab * (1 - torch.eye(20))
 
         tmp = torch.pow(torch.mm(weight, xh1 - xh2), 2)
-        l1 = torch.sum(tmp * mask1) / torch.sum(mask1)
+        # l1 = torch.sum(tmp * mask1) / torch.sum(mask1)
+        l1 = torch.sum(torch.max(tmp - m, torch.FloatTensor([0.0]).to(device))
+                       * mask1) / torch.sum(mask1)
 
         tmp = 1/2 * (torch.mm(weight, xh1) + torch.mm(weight, xh2))
         l2 = torch.sum(
@@ -289,9 +298,10 @@ def WLOSS_orig(x, element_logits, weight, labels, n_similar, seq_len, device):
             * mask1
         ) / torch.sum(mask1)
 
-        sim_loss += 1/3 * (l2 + l3 + l4)
+        sim_loss += 1/4 * (l1 + l2 + l3 + l4)
+        n_tmp = n_tmp + torch.sum(Variable(labels[i, :]) * Variable(labels[i + 1, :]))
 
-    sim_loss = sim_loss / x.shape[0]
+    sim_loss = sim_loss / n_tmp
     return sim_loss
 
 
@@ -299,9 +309,9 @@ def WLOSS(x, element_logits, gt_feat_t, weight, labels, seq_len, device):
 
     gt_feat = torch.transpose(gt_feat_t, 0, 1)
     sim_loss = 0
-    sig = 2.5
+    sig = 1.5
     eps = 1e-10
-    m = 2
+    m = 5
     for i in range(element_logits.shape[0]):
         atn1 = F.softmax(element_logits[i][: seq_len[i]], dim=0)
 
@@ -316,8 +326,10 @@ def WLOSS(x, element_logits, gt_feat_t, weight, labels, seq_len, device):
 
         # loss 1 : <wc, (x_h - g_c)>^2 = 0
         tmp_dis = torch.abs(torch.mm(weight, x_h - gt_feat))
-        tmp_dis = (1+np.exp(-m)) / (1 + torch.exp(tmp_dis - m))
-        loss1 = torch.sum(-torch.log(tmp_dis + eps) * mask1) / torch.sum(mask1)
+        # tmp_dis = (1+np.exp(-m)) / (1 + torch.exp(tmp_dis - m))
+        # loss1 = torch.sum(-torch.log(tmp_dis + eps) * mask1) / torch.sum(mask1)
+        loss1 = torch.sum(torch.max(tmp_dis - m, torch.FloatTensor([0.0]).to(device))
+                       * mask1) / torch.sum(mask1)
         # this should be zero
 
         # # <wc, xh> = +inf
@@ -326,9 +338,9 @@ def WLOSS(x, element_logits, gt_feat_t, weight, labels, seq_len, device):
         #                * mask1) / torch.sum(mask1)
 
         # # <wc, gc> = +inf
-        # tmp2 = torch.mm(weight, gt_feat)
-        # l2 = torch.sum(torch.max(sig - tmp2, torch.FloatTensor([0.0]).to(device))
-        #                * mask1) / torch.sum(mask1)
+        tmp2 = torch.mm(weight, gt_feat)
+        l2 = torch.sum(torch.max(sig - tmp2, torch.FloatTensor([0.0]).to(device))
+                       * mask1) / torch.sum(mask1)
 
         # # <wc, xl> = -inf
         # tmp3 = torch.mm(weight, x_l)
@@ -340,7 +352,7 @@ def WLOSS(x, element_logits, gt_feat_t, weight, labels, seq_len, device):
         #                * mask2) / torch.sum(mask2)
 
         # sim_loss += 1/5 * (l1 + l2 + l3 + l4 + loss1)
-        sim_loss += loss1
+        sim_loss += (l2)
 
     sim_loss /= element_logits.shape[0]
     return sim_loss
@@ -385,11 +397,12 @@ def l1loss(atn, seq_len):
 def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
 
     #####
-    features = dataset.load_partial(is_random=False)
-    features = torch.from_numpy(features).float().to(device)
-    model.train(False)
-    gt_features = model(Variable(features), is_tmp=True)
-    model.train(True)
+    # features = dataset.load_partial(is_random=False)
+    # features = torch.from_numpy(features).float().to(device)
+    # # model.train(False)
+    # with torch.no_grad():
+    #     gt_features = model(Variable(features), is_tmp=True, is_training=False)
+    # model.train(True)
 
     features, labels = dataset.load_data(n_similar=args.num_similar)
     seq_len = np.sum(np.max(np.abs(features), axis=2) > 0, axis=1)
@@ -403,20 +416,20 @@ def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
     milloss = MILL_all(element_logits, seq_len, args.batch_size, labels, device)
 
     weight = model.classifier.weight
-    # casloss = WLOSS_orig(final_features, element_logits, weight, labels, args.num_similar,
-    #                      seq_len, device)
+    casloss = WLOSS_orig(final_features, element_logits, weight, labels, args.num_similar,
+                         seq_len, device)
 
-    casloss2 = WLOSS(final_features, element_logits, gt_features, weight, labels,
-                     seq_len, device)
+    # casloss2 = WLOSS(final_features, element_logits, gt_features, weight, labels,
+    #                  seq_len, device)
 
-    total_loss = args.Lambda * milloss #+ (1 - args.Lambda) * (casloss2)
+    total_loss = args.Lambda * milloss + (1 - args.Lambda) * (casloss)
 
     if torch.isnan(total_loss):
         import pdb
         pdb.set_trace()
 
     logger.log_value("milloss", milloss, itr)
-    logger.log_value('casloss', casloss2, itr)
+    logger.log_value('casloss', casloss, itr)
     logger.log_value("total_loss", total_loss, itr)
 
     # print(f'{itr} : loss : ', [total_loss.data.cpu(), milloss.data.cpu(), casloss.data.cpu()])
