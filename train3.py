@@ -34,7 +34,7 @@ def MILL(element_logits, seq_len, batch_size, labels, device):
     return milloss
 
 
-def MILL_all(element_logits, seq_len, batch_size, labels, device):
+def MILL_all(element_logits, seq_len, batch_size, labels, device, args):
     """ element_logits should be torch tensor of dimension (B, n_element, n_class),
          k should be numpy array of dimension (B,) indicating the top k locations to average over,
          labels should be a numpy array of dimension (B, n_class) of 1 or 0
@@ -52,6 +52,11 @@ def MILL_all(element_logits, seq_len, batch_size, labels, device):
         lab = Variable(labels[i])
         loss1 = -torch.sum(lab * torch.log(topk+eps)) / torch.sum(lab)
         loss2 = -torch.sum((1-lab) * torch.log(1-topk+eps)) / torch.sum(1-lab)
+
+        # _loss = -torch.mean(
+        #     lab * torch.log(topk+eps) + args.dis * (1-lab) * torch.log(1-topk+eps)
+        # )
+        # loss += _loss
 
         loss += 1/2 * (loss1 + loss2)
 
@@ -381,11 +386,11 @@ def l1loss(atn, seq_len):
 def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
 
     #####
-    features = dataset.load_partial(is_random=True)
-    features = torch.from_numpy(features).float().to(device)
-    # model.train(False)
-    gt_features = model(Variable(features), is_tmp=True)
-    # model.train(True)
+    # features = dataset.load_partial(is_random=True)
+    # features = torch.from_numpy(features).float().to(device)
+    # # model.train(False)
+    # gt_features = model(Variable(features), is_tmp=True)
+    # # model.train(True)
 
     features, labels = dataset.load_data(n_similar=args.num_similar)
     seq_len = np.sum(np.max(np.abs(features), axis=2) > 0, axis=1)
@@ -396,25 +401,25 @@ def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
 
     final_features, element_logits = model(Variable(features))
 
-    milloss = MILL_all(element_logits, seq_len, args.batch_size, labels, device)
+    milloss = MILL_all(element_logits, seq_len, args.batch_size, labels, device, args)
 
     weight = model.classifier.weight
-    casloss = WLOSS_orig(final_features, element_logits, weight, labels, args.num_similar,
-                         seq_len, device, args)
+    # casloss = WLOSS_orig(final_features, element_logits, weight, labels, args.num_similar,
+    #                      seq_len, device, args)
 
     # casloss = CASL(final_features, element_logits, seq_len, args.num_similar, labels, device)
 
-    casloss2 = WLOSS(final_features, element_logits, gt_features, weight, labels,
-                     seq_len, device, args)
+    # casloss2 = WLOSS(final_features, element_logits, gt_features, weight, labels,
+    #                  seq_len, device, args)
 
-    total_loss = args.Lambda * milloss + (1 - args.Lambda) * (casloss) + 0.1 * casloss2
+    total_loss = args.Lambda * milloss #+ (1 - args.Lambda) * (casloss) + (1 - args.Lambda) * casloss2
 
     if torch.isnan(total_loss):
         import pdb
         pdb.set_trace()
 
     logger.log_value("milloss", milloss, itr)
-    logger.log_value('casloss', casloss, itr)
+    # logger.log_value('casloss', casloss, itr)
     logger.log_value("total_loss", total_loss, itr)
 
     # print(f'{itr} : loss : ', [total_loss.data.cpu(), milloss.data.cpu(), casloss.data.cpu()])

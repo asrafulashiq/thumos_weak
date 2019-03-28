@@ -40,7 +40,6 @@ class Model(torch.nn.Module):
         inputs = F.relu(self.init_fc(inputs))
         if is_training:
             inputs = self.init_drop(inputs)
-
         x = F.relu(self.fc(inputs))
         if is_training:
             x = self.dropout(x)
