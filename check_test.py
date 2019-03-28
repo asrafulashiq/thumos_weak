@@ -31,13 +31,13 @@ else:
     out_name = "./fig/test_figures_detect.pdf"
 
 
-def smooth(v, order=10):
-    # return v
-    l = min(order + 1, len(v))
-    l = l - (1 - l % 2)
-    if len(v) <= order:
-        return v
-    return savgol_filter(v, l, order)
+def smooth(v, order=2):
+    return v
+    # l = min(order + 1, len(v))
+    # l = l - (1 - l % 2)
+    # if len(v) <= order:
+    #     return v
+    # return savgol_filter(v, l, order)
 
 
 def test(features, model, device):
@@ -115,12 +115,12 @@ if __name__ == "__main__":
         for classname in np.unique(labs):
             cls_idx = utils.str2ind(classname, dataset.classlist)
             logit = element_logits[:, cls_idx]
-            logit[logit < 0] = 0
-            logit[logit > 2] = 2
-            logit = (logit - np.min(logit))/(np.max(logit)-np.min(logit))
+            # logit[logit < 0] = 0
+            # logit[logit > 2] = 2
+            logit = (logit - np.min(logit))/(np.max(logit)-np.min(logit)+1e-10)
             logit = smooth(logit)
 
-            pred_loc = get_pred_loc(logit, threshold=0.2)
+            pred_loc = get_pred_loc(logit, threshold=0.4)
             pred = np.zeros(len(feat))
 
             for _loc in pred_loc:
@@ -138,7 +138,7 @@ if __name__ == "__main__":
             ax.plot(gt, color=palette[cls_idx], linestyle='-',
                     linewidth=2, alpha=0.4)
             ax.plot(pred, color=palette[cls_idx], linestyle='-.', linewidth=2, alpha=0.4)
-            # ax.plot(logit, color=palette[cls_idx], linewidth=2)
+            ax.plot(logit, color=palette[cls_idx], linewidth=2)
         # ax.plot(atn, color=(0, 0, 0), alpha=0.6)
         ax.grid(True)
         ax.set_yticks([0, 0.2, 0.4, 0.5, 0.6, 0.8])

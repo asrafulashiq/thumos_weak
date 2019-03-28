@@ -47,6 +47,8 @@ class Dataset:
 
         self.get_gt_for_sup()
 
+        self.normalize = False
+
     def get_gt_for_sup(self):
         for category in self.classlist:
             cnt = 0
@@ -132,7 +134,7 @@ class Dataset:
 
             return (
                 np.array(
-                    [utils.process_feat(self.features[i], self.t_max) for i in idx]
+                    [utils.process_feat(self.features[i], self.t_max, self.normalize) for i in idx]
                 ),
                 np.array([self.labels_multihot[i] for i in idx]),
             )
@@ -153,7 +155,7 @@ class Dataset:
     def load_valid(self):
         indices = np.random.choice(self.testidx, size=self.batch_size)
         data = np.array(
-            [utils.process_feat(self.features[i], self.t_max) for i in indices]
+            [utils.process_feat(self.features[i], self.t_max, self.normalize) for i in indices]
         )
         labels = np.array([self.labels_multihot[i] for i in indices])
         return data, labels

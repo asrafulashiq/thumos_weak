@@ -45,12 +45,6 @@ class Model(torch.nn.Module):
             x = self.dropout(x)
         if is_tmp:
             return x
-
-        # atn = F.sigmoid(self.atn(x))
-
-        #x = F.relu(self.fc1(x))
-        #if is_training:
-        #    x = self.dropout(x)
         return x, self.classifier(x)
 
 
@@ -144,11 +138,12 @@ class Model_detect(nn.Module):
         # self.dropout_rate = dropout_rate
 
         self.init_fc = nn.Linear(n_feature, n_feature)
+
         self.drop1 = nn.Dropout(dropout_rate)
 
-        self.tcn = tcn(n_feature, [n_feature], kernel_size=2, dropout=0.6)
+        self.tcn = tcn(n_feature, [n_feature], kernel_size=2, dropout=0.7)
 
-        self.fc_class = nn.Linear(n_feature, n_class)
+        self.classifier = nn.Linear(n_feature, n_class, bias=False)
 
         self.apply(weights_init)
 
@@ -156,20 +151,14 @@ class Model_detect(nn.Module):
         # N, L, Cin
         if len(inputs.shape) < 3:
             inputs = inputs.unsqueeze(0)
-        N, L, _ = inputs.shape
-
+        # N, L, _ = inputs.shape
         inputs = self.drop1(F.relu(self.init_fc(inputs)))
-        if is_tmp:
-            return inputs.squeeze()
         x_in = self.tcn(inputs.transpose(-1, -2))
         x = x_in.transpose(-1, -2)
 
-        # x = F.relu(self.init_fc(inputs))
-        # x = self.drop1(x)
+        x_class = self.classifier(x)
 
-        x_class = self.fc_class(x)
-
-        return inputs, x_class
+        return x, x_class
 
 
 class Model_tcn(torch.nn.Module):

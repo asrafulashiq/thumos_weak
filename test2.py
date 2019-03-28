@@ -34,7 +34,7 @@ def test(itr, dataset, args, model, logger, device):
 
         with torch.no_grad():
             _, element_logits = model(Variable(features), is_training=False)
-        # element_logits = element_logits.squeeze()
+        element_logits = element_logits.squeeze(0)
 
         topk, _ = torch.topk(element_logits,
                              k=int(features.shape[0]/8), dim=0)

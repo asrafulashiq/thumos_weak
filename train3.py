@@ -34,7 +34,7 @@ def MILL(element_logits, seq_len, batch_size, labels, device):
     return milloss
 
 
-def MILL_all(element_logits, seq_len, batch_size, labels, device, args):
+def MILL_all(element_logits, seq_len, batch_size, labels, device):
     """ element_logits should be torch tensor of dimension (B, n_element, n_class),
          k should be numpy array of dimension (B,) indicating the top k locations to average over,
          labels should be a numpy array of dimension (B, n_class) of 1 or 0
@@ -296,6 +296,7 @@ def WLOSS_orig(x, element_logits, weight, labels, n_similar, seq_len, device, ar
         d2 = torch.pow(torch.mm(weight, xh1_h - xl2_h), 2)
 
         d3 = torch.pow(torch.mm(weight, xh2_h - xl1_h), 2)
+
         sim_loss = sim_loss + 0.5 * torch.sum(
             torch.max(d1 - d2 + sig, torch.FloatTensor([0.0]).to(device))
             * mask1
@@ -401,18 +402,18 @@ def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
 
     final_features, element_logits = model(Variable(features))
 
-    milloss = MILL_all(element_logits, seq_len, args.batch_size, labels, device, args)
+    milloss = MILL_all(element_logits, seq_len, args.batch_size, labels, device)
 
     weight = model.classifier.weight
-    # casloss = WLOSS_orig(final_features, element_logits, weight, labels, args.num_similar,
-    #                      seq_len, device, args)
+    casloss = WLOSS_orig(final_features, element_logits, weight, labels, args.num_similar,
+                         seq_len, device, args)
 
     # casloss = CASL(final_features, element_logits, seq_len, args.num_similar, labels, device)
 
     # casloss2 = WLOSS(final_features, element_logits, gt_features, weight, labels,
     #                  seq_len, device, args)
 
-    total_loss = args.Lambda * milloss #+ (1 - args.Lambda) * (casloss) + (1 - args.Lambda) * casloss2
+    total_loss = args.Lambda * milloss + (1 - args.Lambda) * (casloss)
 
     if torch.isnan(total_loss):
         import pdb

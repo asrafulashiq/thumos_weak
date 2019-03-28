@@ -52,7 +52,7 @@ parser.add_argument(
     help="maximum iteration to train (default: 50000)",
 )
 
-parser.add_argument("--dis", type=float, default=0.5, help="distance thres")
+parser.add_argument("--dis", type=float, default=3, help="distance thres")
 
 parser.add_argument("--test", action='store_true')
 
