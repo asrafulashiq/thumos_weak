@@ -12,7 +12,7 @@ parser.add_argument(
 )
 parser.add_argument("--model-name", "-m", default="weakloc", help="name to save model")
 parser.add_argument(
-    "--pretrained-ckpt", "-ckpt", default=None, help="ckpt for pretrained model"
+    "--pretrained-ckpt", "--ckpt", default=None, help="ckpt for pretrained model"
 )
 parser.add_argument(
     "--feature-size", default=2048, help="size of feature (default: 2048)"
@@ -48,7 +48,7 @@ parser.add_argument("--seed", type=int, default=1, help="random seed (default: 1
 parser.add_argument(
     "--max-iter",
     type=int,
-    default=50000,
+    default=20000,
     help="maximum iteration to train (default: 50000)",
 )
 
