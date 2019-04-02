@@ -43,7 +43,6 @@ if __name__ == "__main__":
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.0005)
     # optimizer = optim.SGD(model.parameters(), lr=args.lr, weight_decay=0.0005)
     init_itr = 0
-
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
         optimizer, [3000, 5000, 10000], 0.5
     )
@@ -66,7 +65,8 @@ if __name__ == "__main__":
         # train(itr, dataset, args, model, optimizer, logger, device,
         #       valid=args.valid, scheduler=None)
         train(
-            itr, dataset, args, model, optimizer, logger, device, scheduler=lr_scheduler
+            itr, dataset, args, model, optimizer, logger, device,
+            scheduler=lr_scheduler
         )
         if itr % 200 == 0 and not itr == 0:
             if type(model) == torch.nn.DataParallel:
@@ -89,4 +89,5 @@ if __name__ == "__main__":
                 best_dmap_itr = (dmap, itr)
 
     print()
-    print(f"Best Detection mAP : {best_dmap_itr[0]:.3f} @iter {best_dmap_itr[1]}")
+    print(
+     f"Best Detection mAP : {best_dmap_itr[0]:.3f} @iter {best_dmap_itr[1]}")

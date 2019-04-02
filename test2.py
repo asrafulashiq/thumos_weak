@@ -74,7 +74,8 @@ def test(itr, dataset, args, model, logger, device):
 
     logger.log_value("Test Classification mAP", cmap, itr)
     for item in list(zip(dmap, iou)):
-        logger.log_value("Test Detection mAP @ IoU = " + str(item[1]), item[0], itr)
+        logger.log_value("Test Detection mAP @ IoU = " +
+                         str(item[1]), item[0], itr)
 
     utils.write_to_file(args.dataset_name, dmap, cmap, itr)
 

@@ -13,34 +13,13 @@ import time
 torch.set_default_tensor_type("torch.cuda.FloatTensor")
 
 
-def MILL(element_logits, seq_len, batch_size, labels, device):
-    """ element_logits should be torch tensor of dimension (B, n_element, n_class),
-         k should be numpy array of dimension (B,) indicating the top k locations to average over,
-         labels should be a numpy array of dimension (B, n_class) of 1 or 0
-         return is a torch tensor of dimension (B, n_class) """
-
-    k = np.ceil(seq_len / 8).astype("int32")
-    labels = labels / torch.sum(labels, dim=1, keepdim=True)
-    instance_logits = torch.zeros(0).to(device)
-    for i in range(batch_size):
-        tmp, _ = torch.topk(
-            element_logits[i][: seq_len[i]], k=int(k[i]), dim=0)
-        instance_logits = torch.cat(
-            [instance_logits, torch.mean(tmp, 0, keepdim=True)], dim=0
-        )
-    milloss = -torch.mean(
-        torch.sum(Variable(labels) *
-                  F.log_softmax(instance_logits, dim=1), dim=1),
-        dim=0,
-    )
-    return milloss
-
-
 def MILL_all(element_logits, seq_len, batch_size, labels, device):
-    """ element_logits should be torch tensor of dimension (B, n_element, n_class),
-         k should be numpy array of dimension (B,) indicating the top k locations to average over,
-         labels should be a numpy array of dimension (B, n_class) of 1 or 0
-         return is a torch tensor of dimension (B, n_class) """
+    """ element_logits should be torch tensor of dimension
+        (B, n_element, n_class),
+        k should be numpy array of dimension (B,) indicating the top k
+        locations to average over,
+        labels should be a numpy array of dimension (B, n_class) of 1 or 0
+        return is a torch tensor of dimension (B, n_class) """
 
     k = np.ceil(seq_len / 8).astype("int32")
     # labels = labels / torch.sum(labels, dim=1, keepdim=True)
@@ -57,7 +36,8 @@ def MILL_all(element_logits, seq_len, batch_size, labels, device):
         loss2 = -torch.sum((1-lab) * torch.log(1-topk+eps)) / torch.sum(1-lab)
 
         # _loss = -torch.mean(
-        #     lab * torch.log(topk+eps) + args.dis * (1-lab) * torch.log(1-topk+eps)
+        #     lab * torch.log(topk+eps) + args.dis *
+        #       (1-lab) * torch.log(1-topk+eps)
         # )
         # loss += _loss
 
@@ -74,7 +54,8 @@ def MILL_all(element_logits, seq_len, batch_size, labels, device):
 def CASL(x, element_logits, seq_len, n_similar, labels, device):
     """ x is the torch tensor of feature from the last layer of model
         of dimension (n_similar, n_element, n_feature),
-        element_logits should be torch tensor of dimension (n_similar, n_element, n_class)
+        element_logits should be torch tensor of
+        dimension (n_similar, n_element, n_class)
         seq_len should be numpy array of dimension (B,)
         labels should be a numpy array of dimension (B, n_class) of 1 or 0 """
 
@@ -147,7 +128,8 @@ def cosine_dis(x, y):
 def CASL_2(x, element_logits, seq_len, labels, device, gt_feat_t, atn):
     """ x is the torch tensor of feature from the last layer of model of
         dimension (n_similar, n_element, n_feature),
-        element_logits should be torch tensor of dimension (n_similar, n_element, n_class)
+        element_logits should be torch tensor of dimension
+        (n_similar, n_element, n_class)
         seq_len should be numpy array of dimension (B,)
         labels should be a numpy array of dimension (B, n_class) of 1 or 0 """
 
@@ -213,7 +195,8 @@ def CASL_2(x, element_logits, seq_len, labels, device, gt_feat_t, atn):
 def CASL_2_like(x, element_logits, seq_len, labels, device, gt_feat_t, atn):
     """ x is the torch tensor of feature from the last layer of model of
         dimension (n_similar, n_element, n_feature),
-        element_logits should be torch tensor of dimension (n_similar, n_element, n_class)
+        element_logits should be torch tensor of dimension
+        (n_similar, n_element, n_class)
         seq_len should be numpy array of dimension (B,)
         labels should be a numpy array of dimension (B, n_class) of 1 or 0 """
 
@@ -264,11 +247,8 @@ def get_unit_vector(x):
     return x / torch.norm(x, 2, dim=0, keepdim=True)
 
 
-def max_like(a, b):
-    return torch.log(torch.exp(a) + torch.exp(b))
-
-
-def WLOSS_orig(x, element_logits, weight, labels, n_similar, seq_len, device, args):
+def WLOSS_orig(x, element_logits, weight, labels,
+               n_similar, seq_len, device, args):
 
     sim_loss = 0.0
     n_tmp = 0.0
@@ -285,9 +265,11 @@ def WLOSS_orig(x, element_logits, weight, labels, n_similar, seq_len, device, ar
         n2 = torch.FloatTensor([np.maximum(seq_len[i + 1] - 1, 1)]).to(device)
         xh1 = torch.mm(torch.transpose(x[i][: seq_len[i]], 1, 0), atn1)
         xh2 = torch.mm(torch.transpose(x[i + 1][: seq_len[i + 1]], 1, 0), atn2)
-        # xl1 = torch.mm(torch.transpose(x[i][: seq_len[i]], 1, 0), (1 - atn1) / n1)
+        # xl1 = torch.mm(torch.transpose(x[i][: seq_len[i]], 1, 0),
+        # (1 - atn1) / n1)
         # xl2 = torch.mm(
-        #     torch.transpose(x[i + 1][: seq_len[i + 1]], 1, 0), (1 - atn2) / n2
+        #     torch.transpose(x[i + 1][: seq_len[i + 1]], 1, 0),
+        # (1 - atn2) / n2
         # )
         xl1 = torch.mm(torch.transpose(x[i][: seq_len[i]], 1, 0), atn1_l)
         xl2 = torch.mm(
@@ -310,11 +292,11 @@ def WLOSS_orig(x, element_logits, weight, labels, n_similar, seq_len, device, ar
         d3 = torch.pow(torch.mm(weight, xh2_h - xl1_h), 2)
 
         sim_loss = sim_loss + 0.5 * torch.sum(
-            max_like(d1 - d2 + sig, torch.FloatTensor([0.0]).to(device))
+            torch.max(d1 - d2 + sig, torch.FloatTensor([0.0]).to(device))
             * mask1
         ) / torch.sum(mask1)
         sim_loss = sim_loss + 0.5 * torch.sum(
-            max_like(d1 - d3 + sig, torch.FloatTensor([0.0]).to(device))
+            torch.max(d1 - d3 + sig, torch.FloatTensor([0.0]).to(device))
             * mask1
         ) / torch.sum(mask1)
 
@@ -362,7 +344,8 @@ def WLOSS(x, element_logits, gt_feat_t, weight, labels, seq_len, device, args):
 
 
 def continuity_loss(element_logits, labels, seq_len, batch_size, device):
-    """ element_logits should be torch tensor of dimension (B, n_element, n_class),
+    """ element_logits should be torch tensor of
+    dimension (B, n_element, n_class),
     return is a torch tensor of dimension (B, n_class) """
 
     labels_var = Variable(labels)
@@ -376,7 +359,8 @@ def continuity_loss(element_logits, labels, seq_len, batch_size, device):
     # labels_sum = torch.sum(labels_var, -1, keepdim=True) + 1e-8  # B, 1
 
     logit_s = logit_diff  # / labels_sum  # B, n_cls
-    logit_s = logit_s / torch.from_numpy(seq_len.astype(np.float32)).unsqueeze(-1).to(
+    logit_s = logit_s / torch.from_numpy(
+        seq_len.astype(np.float32)).unsqueeze(-1).to(
         device
     )
     c_loss = torch.sum(logit_s) / batch_size
@@ -419,12 +403,15 @@ def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
                        args.batch_size, labels, device)
 
     weight = model.classifier.weight
-    casloss = WLOSS_orig(final_features, element_logits, weight, labels, args.num_similar,
+    casloss = WLOSS_orig(final_features, element_logits, weight,
+                         labels, args.num_similar,
                          seq_len, device, args)
 
-    # casloss = CASL(final_features, element_logits, seq_len, args.num_similar, labels, device)
+    # casloss = CASL(final_features, element_logits,
+    # seq_len, args.num_similar, labels, device)
 
-    # casloss2 = WLOSS(final_features, element_logits, gt_features, weight, labels,
+    # casloss2 = WLOSS(final_features, element_logits,
+    # gt_features, weight, labels,
     #                  seq_len, device, args)
 
     total_loss = args.Lambda * milloss + (1 - args.Lambda) * (casloss)
@@ -437,7 +424,8 @@ def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
     # logger.log_value('casloss', casloss, itr)
     logger.log_value("total_loss", total_loss, itr)
 
-    # print(f'{itr} : loss : ', [total_loss.data.cpu(), milloss.data.cpu(), casloss.data.cpu()])
+    # print(f'{itr} : loss : ', [total_loss.data.cpu(),
+    # milloss.data.cpu(), casloss.data.cpu()])
 
     print("Iteration: %d, Loss: %.3f" % (itr, total_loss.data.cpu().numpy()))
 
