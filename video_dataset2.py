@@ -8,7 +8,7 @@ np.random.seed(0)
 
 
 class Dataset:
-    def __init__(self, args):
+    def __init__(self, args, mode='both'):
         self.dataset_name = args.dataset_name
         self.num_class = args.num_class
         self.feature_size = args.feature_size
@@ -48,6 +48,9 @@ class Dataset:
         self.get_gt_for_sup()
 
         self.normalize = False
+        self.mode = mode
+        if mode == 'rgb' or mode == 'flow':
+            self.feature_size = 1024
 
     def get_gt_for_sup(self):
         for category in self.classlist:
@@ -132,12 +135,16 @@ class Dataset:
             for r in rand_sampleid:
                 idx.append(self.trainidx[r])
 
-            return (
-                np.array(
+            feat = np.array(
                     [utils.process_feat(self.features[i], self.t_max, self.normalize) for i in idx]
-                ),
-                np.array([self.labels_multihot[i] for i in idx]),
-            )
+                )
+            labels = np.array([self.labels_multihot[i] for i in idx])
+
+            if self.mode == 'rgb':
+                feat = feat[..., :self.feature_size]
+            elif self.mode == 'flow':
+                feat = feat[..., self.feature_size:]
+            return feat, labels
 
         else:
             labs = self.labels_multihot[self.testidx[self.currenttestidx]]
@@ -150,7 +157,12 @@ class Dataset:
                 done = False
                 self.currenttestidx += 1
 
-            return np.array(feat), np.array(labs), done
+            feat = np.array(feat)
+            if self.mode == 'rgb':
+                feat = feat[..., :self.feature_size]
+            elif self.mode == 'flow':
+                feat = feat[..., self.feature_size:]
+            return feat, np.array(labs), done
 
     def load_valid(self):
         indices = np.random.choice(self.testidx, size=self.batch_size)

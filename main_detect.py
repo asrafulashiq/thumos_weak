@@ -27,7 +27,7 @@ if __name__ == "__main__":
     torch.manual_seed(args.seed)
     device = torch.device("cuda")
 
-    dataset = Dataset(args)
+    dataset = Dataset(args, mode='flow')
     if not os.path.exists("./ckpt/"):
         os.makedirs("./ckpt/")
     if not os.path.exists("./logs/" + args.model_name):
