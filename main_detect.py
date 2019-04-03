@@ -1,5 +1,5 @@
 from __future__ import print_function
-import argparse
+# import argparse
 import os
 import torch
 import torch.optim as optim
@@ -16,9 +16,8 @@ from test2 import test
 from train_new import train
 import options
 
-
 from tensorboard_logger import Logger
-from tqdm import tqdm
+# from tqdm import tqdm
 
 torch.set_default_tensor_type("torch.cuda.FloatTensor")
 
@@ -41,7 +40,8 @@ if __name__ == "__main__":
     model = model.to(device)
 
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.0005)
-    # optimizer = optim.SGD(model.parameters(), lr=args.lr, weight_decay=0.0005)
+    # optimizer = optim.SGD(model.parameters(), lr=args.lr,
+    #                       weight_decay=0.0005)
     init_itr = 0
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
         optimizer, [3000, 5000, 10000], 0.5
