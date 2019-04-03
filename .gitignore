@@ -7,7 +7,7 @@ logs/*
 models/*
 ckpt/*
 *.back
-.vscode
+.vscode/*
 *.log
 *.pdf
 *.png

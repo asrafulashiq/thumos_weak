@@ -13,7 +13,7 @@ import torch.optim as optim
 from model import Model
 from video_dataset2 import Dataset
 from test2 import test
-from train3 import train
+from train_new import train
 import options
 
 
@@ -27,7 +27,7 @@ if __name__ == "__main__":
     torch.manual_seed(args.seed)
     device = torch.device("cuda")
 
-    dataset = Dataset(args, mode='flow')
+    dataset = Dataset(args, mode='both')
     if not os.path.exists("./ckpt/"):
         os.makedirs("./ckpt/")
     if not os.path.exists("./logs/" + args.model_name):
@@ -67,7 +67,7 @@ if __name__ == "__main__":
         #       valid=args.valid, scheduler=None)
         train(
             itr, dataset, args, model, optimizer, logger, device,
-            scheduler=None
+            scheduler=lr_scheduler
         )
         if itr % 200 == 0 and not itr == 0:
             if type(model) == torch.nn.DataParallel:

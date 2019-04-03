@@ -265,8 +265,8 @@ def get_unit_vector(x):
 
 
 def max_like(a, b):
-    # return torch.log(torch.exp(a) + torch.exp(b))
-    return torch.max(a, b)
+    return torch.log(torch.exp(a) + torch.exp(b))
+    # return torch.max(a, b)
 
 
 def WLOSS_orig(x, element_logits, weight, labels, n_similar, seq_len, device, args):
@@ -420,10 +420,10 @@ def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
                        args.batch_size, labels, device)
 
     weight = model.classifier.weight
-    # casloss = WLOSS_orig(final_features, element_logits, weight, labels,
-    #                      args.num_similar, seq_len, device, args)
+    casloss = WLOSS_orig(final_features, element_logits, weight, labels,
+                         args.num_similar, seq_len, device, args)
 
-    total_loss = args.Lambda * milloss #+ (1 - args.Lambda) * (casloss)
+    total_loss = args.Lambda * milloss + (1 - args.Lambda) * (casloss)
 
     if torch.isnan(total_loss):
         import pdb
