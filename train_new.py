@@ -63,7 +63,7 @@ def get_per_dis(x1, x2, w):
     x2 = x2.transpose(0, 1).unsqueeze(0)
     x_diff = x1 - x2
 
-    dis_mat = torch.sum(x_diff * w, -1)
+    dis_mat = torch.pow(torch.sum(x_diff * w, -1), 2)
     # dis_mat = dis_mat.reshape(w.shape[0]**2)
 
     return dis_mat
@@ -74,9 +74,10 @@ def WLOSS_orig(x, element_logits, weight, labels,
 
     sim_loss = 0.0
     sig = args.dis
+    labels = Variable(labels)
     for i in range(0, n_similar * 2, 2):
 
-        lab = Variable(labels[i, :]) * Variable(labels[i + 1, :])
+        lab = labels[i, :] * labels[i + 1, :]
 
         common_ind = lab.nonzero().squeeze(-1)
 
@@ -113,9 +114,9 @@ def WLOSS_orig(x, element_logits, weight, labels,
 
         # get negetive instance
         for j in range(x.shape[0]):
-            if j in [i, i+1]:
+            if j in [i, i + 1]:
                 continue
-            cur_lab = Variable(labels[j, :])
+            cur_lab = labels[j, :]
             uncommon_ind = (1 - lab) * cur_lab
             if torch.sum(uncommon_ind) != 0:
                 ind = uncommon_ind.nonzero().squeeze(-1)
@@ -124,13 +125,11 @@ def WLOSS_orig(x, element_logits, weight, labels,
                 xtmp = torch.mm(torch.transpose(x[j][:seq_len[j]], 1, 0),
                                 _atn)
                 xtmp = get_unit_vector(xtmp)
-                _dis = torch.pow(
-                    get_per_dis(xh1_h, xtmp, weight[common_ind, :]), 2)
+                _dis = get_per_dis(xh1_h, xtmp, weight[common_ind, :])
                 dis_neg_1 = torch.cat(
                     [dis_neg_1, _dis], dim=1
                 )
-                _dis = torch.pow(
-                    get_per_dis(xh2_h, xtmp, weight[common_ind, :]), 2)
+                _dis = get_per_dis(xh2_h, xtmp, weight[common_ind, :])
                 dis_neg_2 = torch.cat(
                     [dis_neg_2, _dis], dim=1
                 )
@@ -150,7 +149,8 @@ def WLOSS_orig(x, element_logits, weight, labels,
     return sim_loss
 
 
-def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
+def train(itr, dataset, args, model, optimizer,
+          logger, device, scheduler=None):
 
     #####
     # features = dataset.load_partial(is_random=True)
