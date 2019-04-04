@@ -7,7 +7,7 @@ parser.add_argument(
 parser.add_argument(
     "--batch-size",
     type=int,
-    default=10,
+    default=20,
     help="number of instances in a batch of data (default: 10)",
 )
 parser.add_argument("--model-name", "-m", default="weakloc", help="name to save model")
@@ -55,4 +55,7 @@ parser.add_argument(
 parser.add_argument("--dis", type=float, default=3, help="distance thres")
 
 parser.add_argument("--test", action='store_true')
+
+parser.add_argument("--similar-size", type=int, default=2,
+                    help="how many instances of similar type will be there")
 

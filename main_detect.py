@@ -11,10 +11,13 @@ import torch.optim as optim
 # import options_attn as options
 
 from model import Model
-from video_dataset2 import Dataset
+# from video_dataset2 import Dataset
 from test2 import test
-from train_new import train
+# from train_new import train
 import options
+
+from train_expand import train
+from dataset import Dataset
 
 from tensorboard_logger import Logger
 # from tqdm import tqdm
@@ -25,6 +28,7 @@ if __name__ == "__main__":
     args = options.parser.parse_args()
     torch.manual_seed(args.seed)
     device = torch.device("cuda")
+    print(args)
 
     dataset = Dataset(args, mode='both')
     if not os.path.exists("./ckpt/"):
