@@ -21,7 +21,7 @@ def idx2multihot(id_list, num_class):
 
 def random_extract(feat, t_max):
     r = np.random.randint(len(feat) - t_max)
-    return feat[r : r + t_max]
+    return feat[r: r + t_max]
 
 
 def pad(feat, min_len):
@@ -57,4 +57,3 @@ def write_to_file(dname, dmap, cmap, itr):
     string_to_write += " " + "%.2f" % cmap
     fid.write(string_to_write + "\n")
     fid.close()
-
