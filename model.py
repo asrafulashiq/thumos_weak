@@ -28,7 +28,7 @@ class Model(torch.nn.Module):
 
         self.fc = nn.Linear(n_feature, n_feature)
         # self.fc1 = nn.Linear(n_feature, n_feature)
-        self.classifier = nn.Linear(n_feature, n_class, bias=False)
+        self.classifier = nn.Linear(n_feature, n_class, bias=True)
         self.dropout = nn.Dropout(0.7)
 
         # self.atn = nn.Linear(n_feature, 1)

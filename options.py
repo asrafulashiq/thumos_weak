@@ -7,7 +7,7 @@ parser.add_argument(
 parser.add_argument(
     "--batch-size",
     type=int,
-    default=20,
+    default=10,
     help="number of instances in a batch of data (default: 10)",
 )
 parser.add_argument("--model-name", "-m", default="weakloc", help="name to save model")

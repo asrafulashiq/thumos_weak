@@ -6,7 +6,7 @@ from torch.autograd import Variable
 torch.set_default_tensor_type("torch.cuda.FloatTensor")
 
 
-def MILL_all(element_logits, seq_len, batch_size, labels, device):
+def MILL_all(element_logits, seq_len, labels, device):
     """ element_logits should be torch tensor of dimension
         (B, n_element, n_class),
         k should be numpy array of dimension (B,) indicating the top k
@@ -19,7 +19,7 @@ def MILL_all(element_logits, seq_len, batch_size, labels, device):
     # instance_logits = torch.zeros(0).to(device)
     eps = 1e-8
     loss = 0
-    for i in range(batch_size):
+    for i in range(element_logits.shape[0]):
         tmp, _ = torch.topk(
             element_logits[i][: seq_len[i]], k=int(k[i]), dim=0)
 
@@ -34,7 +34,7 @@ def MILL_all(element_logits, seq_len, batch_size, labels, device):
             import pdb
             pdb.set_trace()
 
-    milloss = loss / batch_size
+    milloss = loss / element_logits.shape[0]
     return milloss
 
 
@@ -43,13 +43,14 @@ def get_unit_vector(x):
     return x / torch.norm(x, 2, dim=0, keepdim=True)
 
 
-def max_like(a, b, beta=1):
+def max_like(a, b, beta=10):
     return 1/beta * torch.log(torch.exp(beta*a) + torch.exp(beta*b))
     # return torch.max(a, b)
 
 
-def list_max_like(x, beta=1000):
+def list_max_like(x, beta=100):
     return 1/beta * torch.logsumexp(beta*x, -1)
+    # return torch.max(x, dim=-1)[0]
 
 
 def list_min_like(x, beta=100):
@@ -64,6 +65,7 @@ def get_per_dis(x1, x2, w):
     x_diff = x1 - x2
 
     dis_mat = torch.pow(torch.sum(x_diff * w, -1), 2)
+    # dis_mat = torch.norm(x_diff, 2, -1)
     # dis_mat = dis_mat.reshape(w.shape[0]**2)
 
     return dis_mat
@@ -75,75 +77,47 @@ def WLOSS_orig(x, element_logits, weight, labels,
     sim_loss = 0.0
     sig = args.dis
     labels = Variable(labels)
-    for i in range(0, n_similar * 2, 2):
+    for i in range(0, n_similar * args.similar_size, args.similar_size):
 
-        lab = labels[i, :] * labels[i + 1, :]
+        lab = labels[i, :]
+        for k in range(i+1, i+args.similar_size):
+            lab = lab * labels[k, :]
 
-        common_ind = lab.nonzero().squeeze(-1)
+        common_ind = lab.nonzero().squeeze(-1)[0]
 
-        atn1 = F.softmax(element_logits[i][:seq_len[i], common_ind], dim=0)
-        atn2 = F.softmax(element_logits[i+1][:seq_len[i+1], common_ind], dim=0)
+        Xh = torch.Tensor()
+        Xl = torch.Tensor()
 
-        atn1_l = F.softmin(element_logits[i][:seq_len[i], common_ind], dim=0)
-        atn2_l = F.softmin(element_logits[i+1][:seq_len[i+1],
-                                               common_ind], dim=0)
+        for k in range(i, i+args.similar_size):
+            atn = F.softmax(
+                element_logits[k][:seq_len[k], [common_ind]], dim=0
+            )
+            atn_l = F.softmin(
+                element_logits[k][:seq_len[k], [common_ind]], dim=0
+            )
+            xh = torch.mm(torch.transpose(x[k][:seq_len[k]], 1, 0),
+                          atn)
+            xl = torch.mm(torch.transpose(x[k][:seq_len[k]], 1, 0),
+                          atn_l)
+            Xh = torch.cat([Xh, xh], dim=1)
+            Xl = torch.cat([Xl, xl], dim=1)
 
-        xh1 = torch.mm(torch.transpose(x[i][: seq_len[i]], 1, 0), atn1)
-        xh2 = torch.mm(torch.transpose(x[i + 1][: seq_len[i + 1]], 1, 0), atn2)
-        xl1 = torch.mm(torch.transpose(x[i][: seq_len[i]], 1, 0), atn1_l)
-        xl2 = torch.mm(
-            torch.transpose(x[i + 1][: seq_len[i + 1]], 1, 0), atn2_l)
+        Xh = get_unit_vector(Xh)
+        Xl = get_unit_vector(Xl)
 
-        xh1_h = get_unit_vector(xh1)
-        xh2_h = get_unit_vector(xh2)
-        xl1_h = get_unit_vector(xl1)
-        xl2_h = get_unit_vector(xl2)
+        D1 = get_per_dis(Xh, Xh, weight[[common_ind], :])
+        D1 = D1.reshape(args.similar_size**2)
 
-        # d1 = torch.pow(torch.mm(weight[common_ind, :], xh1_h - xh2_h), 2)
+        D2 = get_per_dis(Xh, Xl, weight[[common_ind], :])
+        D2 = D2.reshape(args.similar_size**2)
 
-        # d2 = torch.pow(torch.mm(weight[common_ind, :], xh1_h - xl2_h), 2)
+        d1 = list_max_like(D1)
+        d2 = list_min_like(D2)
+        # d2 = torch.mean(D2)
 
-        d1 = torch.pow(torch.sum(weight[common_ind, :] *
-                       (xh1_h - xh2_h).transpose(0, 1), -1), 2)
-        dis_neg_1 = torch.pow(torch.sum(
-            weight[common_ind, :] *
-            (xh1_h - xl2_h).transpose(0, 1), -1, keepdim=True), 2)
-        dis_neg_2 = torch.pow(torch.sum(
-            weight[common_ind, :] *
-            (xh2_h - xl1_h).transpose(0, 1), -1, keepdim=True), 2)
+        loss = max_like(d1-d2+sig, torch.FloatTensor([0.0]).to(device))
 
-        # get negetive instance
-        for j in range(x.shape[0]):
-            if j in [i, i + 1]:
-                continue
-            cur_lab = labels[j, :]
-            uncommon_ind = (1 - lab) * cur_lab
-            if torch.sum(uncommon_ind) != 0:
-                ind = uncommon_ind.nonzero().squeeze(-1)
-                _atn = F.softmax(element_logits[j][: seq_len[j], ind],
-                                 dim=0)
-                xtmp = torch.mm(torch.transpose(x[j][:seq_len[j]], 1, 0),
-                                _atn)
-                xtmp = get_unit_vector(xtmp)
-                _dis = get_per_dis(xh1_h, xtmp, weight[common_ind, :])
-                dis_neg_1 = torch.cat(
-                    [dis_neg_1, _dis], dim=1
-                )
-                _dis = get_per_dis(xh2_h, xtmp, weight[common_ind, :])
-                dis_neg_2 = torch.cat(
-                    [dis_neg_2, _dis], dim=1
-                )
-        d2 = list_min_like(dis_neg_1)
-        d3 = list_min_like(dis_neg_2)
-
-        # d3 = torch.pow(torch.mm(weight[common_ind, :], xh2_h - xl1_h), 2)
-
-        sim_loss = sim_loss + 0.5 * torch.sum(
-            max_like(d1 - d2 + sig, torch.FloatTensor([0.0]).to(device))
-        ) / torch.sum(lab)
-        sim_loss = sim_loss + 0.5 * torch.sum(
-            max_like(d1 - d3 + sig, torch.FloatTensor([0.0]).to(device))
-        ) / torch.sum(lab)
+        sim_loss += loss
 
     sim_loss = sim_loss / x.shape[0]
     return sim_loss
@@ -151,13 +125,6 @@ def WLOSS_orig(x, element_logits, weight, labels,
 
 def train(itr, dataset, args, model, optimizer,
           logger, device, scheduler=None):
-
-    #####
-    # features = dataset.load_partial(is_random=True)
-    # features = torch.from_numpy(features).float().to(device)
-    # # model.train(False)
-    # gt_features = model(Variable(features), is_tmp=True)
-    # # model.train(True)
 
     features, labels = dataset.load_data(
         n_similar=args.num_similar,
@@ -170,8 +137,7 @@ def train(itr, dataset, args, model, optimizer,
 
     final_features, element_logits = model(Variable(features))
 
-    milloss = MILL_all(element_logits, seq_len,
-                       args.batch_size, labels, device)
+    milloss = MILL_all(element_logits, seq_len, labels, device)
 
     weight = model.classifier.weight
     casloss = WLOSS_orig(final_features, element_logits, weight,

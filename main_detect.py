@@ -8,13 +8,13 @@ import torch.optim as optim
 # from video_dataset import Dataset
 # from test_detect import test
 # from train_detect import train
-# import options_attn as options
+import options_expand as options
 
 from model import Model
 # from video_dataset2 import Dataset
 from test2 import test
 # from train_new import train
-import options
+# import options
 
 from train_expand import train
 from dataset import Dataset
@@ -71,7 +71,7 @@ if __name__ == "__main__":
         #       valid=args.valid, scheduler=None)
         train(
             itr, dataset, args, model, optimizer, logger, device,
-            scheduler=lr_scheduler
+            scheduler=None
         )
         if itr % 200 == 0 and not itr == 0:
             if type(model) == torch.nn.DataParallel:
@@ -86,7 +86,7 @@ if __name__ == "__main__":
                 },
                 "./ckpt/" + args.model_name + ".pkl",
             )
-        if itr % 100 == 0 and not itr == 0:
+        if itr % 50 == 0 and not itr == 0:
             # test(itr, dataset, args, model, logger,
             #      device, is_detect=True, is_score=False)
             dmap = test(itr, dataset, args, model, logger, device)

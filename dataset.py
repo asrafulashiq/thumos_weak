@@ -40,7 +40,8 @@ class Dataset:
 
         # self.num_gt = 5
         # self.gt_loc_ind = np.zeros(
-        #     (len(self.classlist), self.num_gt, self.feature_size), dtype=np.float32
+        #     (len(self.classlist), self.num_gt,
+        #     self.feature_size), dtype=np.float32
         # )
         self.train_test_idx()
         self.classwise_feature_mapping()
@@ -117,22 +118,25 @@ class Dataset:
 
     def load_data(self, n_similar=0, is_training=True, similar_size=2):
         if is_training:
-            features = []
             labels = []
             idx = []
 
             # Load similar pairs
             if n_similar != 0:
-                rand_classid = np.random.choice(len(self.classwiseidx), size=n_similar)
+                rand_classid = np.random.choice(
+                    len(self.classwiseidx), size=n_similar)
                 for rid in rand_classid:
-                    rand_sampleid = np.random.choice(len(self.classwiseidx[rid]), size=similar_size,
-                                replace=False)
-                    # idx.append(self.classwiseidx[rid][rand_sampleid[0]])
-                    # idx.append(self.classwiseidx[rid][rand_sampleid[1]])
+                    rand_sampleid = np.random.choice(
+                        len(self.classwiseidx[rid]),
+                        size=similar_size, replace=False)
+
                     for k in rand_sampleid:
                         idx.append(self.classwiseidx[rid][k])
 
             # Load rest pairs
+            if self.batch_size-similar_size*n_similar < 0:
+                self.batch_size = similar_size*n_similar
+
             rand_sampleid = np.random.choice(
                 len(self.trainidx),
                 size=self.batch_size-similar_size*n_similar)
@@ -141,8 +145,9 @@ class Dataset:
                 idx.append(self.trainidx[r])
 
             feat = np.array(
-                    [utils.process_feat(self.features[i], self.t_max, self.normalize) for i in idx]
-                )
+                [utils.process_feat(
+                    self.features[i], self.t_max, self.normalize) for i in idx]
+            )
             labels = np.array([self.labels_multihot[i] for i in idx])
 
             if self.mode == 'rgb':
@@ -172,20 +177,8 @@ class Dataset:
     def load_valid(self):
         indices = np.random.choice(self.testidx, size=self.batch_size)
         data = np.array(
-            [utils.process_feat(self.features[i], self.t_max, self.normalize) for i in indices]
+            [utils.process_feat(self.features[i], self.t_max,
+                                self.normalize) for i in indices]
         )
         labels = np.array([self.labels_multihot[i] for i in indices])
         return data, labels
-
-    def load_one_test(self):
-        for idx in self.testidx:
-            feat = self.features[idx]
-            labs = self.labels_multihot[idx]
-            yield np.array(feat), np.array(labs)
-
-    def load_one_test_with_segment(self):
-        for idx in self.testidx:
-            feat = self.features[idx]
-            labs = self._labels[idx]
-            seg = self.segments[idx]
-            y
