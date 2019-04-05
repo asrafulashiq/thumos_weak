@@ -1,5 +1,5 @@
 import numpy as np
-from pathlib import Path
+import pickle
 
 
 root = './ActivityNet1.2-Annotations'
@@ -60,4 +60,7 @@ np.save('./ActivityNet1.2-mini-Annotations/segments.npy', mini_segments)
 np.save('./ActivityNet1.2-mini-Annotations/subset.npy', mini_subset)
 np.save('./ActivityNet1.2-mini-Annotations/videoname.npy', mini_vname)
 
-np.save('./ActivityNet1.2-mini-I3D-JOINTFeatures.npy', mini_data)
+with open('./ActivityNet1.2-mini-I3D-JOINTFeatures.npy', 'wb') as fp:
+    pickle.dump(mini_data, fp)
+
+# np.save('./ActivityNet1.2-mini-I3D-JOINTFeatures.npy', mini_data)
