@@ -71,7 +71,7 @@ if __name__ == "__main__":
         #       valid=args.valid, scheduler=None)
         train(
             itr, dataset, args, model, optimizer, logger, device,
-            scheduler=None
+            scheduler=lr_scheduler
         )
         if itr % 200 == 0 and not itr == 0:
             if type(model) == torch.nn.DataParallel:

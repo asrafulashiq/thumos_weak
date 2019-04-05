@@ -111,11 +111,11 @@ def WLOSS_orig(x, element_logits, weight, labels,
         D2 = get_per_dis(Xh, Xl, weight[[common_ind], :])
         D2 = D2.reshape(args.similar_size**2)
 
-        d1 = list_max_like(D1)
-        d2 = list_min_like(D2)
-        # d2 = torch.mean(D2)
+        d1 = list_max_like(D1, beta=args.beta1)
+        d2 = list_min_like(D2, beta=args.beta1)
 
-        loss = max_like(d1-d2+sig, torch.FloatTensor([0.0]).to(device))
+        loss = max_like(d1-d2+sig, torch.FloatTensor([0.0]).to(device),
+                        beta=args.beta2)
 
         sim_loss += loss
 

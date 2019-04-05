@@ -13,7 +13,8 @@ parser.add_argument(
 parser.add_argument("--model-name", "-m", default="weakloc",
                     help="name to save model")
 parser.add_argument(
-    "--pretrained-ckpt", "--ckpt", default=None, help="ckpt for pretrained model"
+    "--pretrained-ckpt", "--ckpt", default=None,
+    help="ckpt for pretrained model"
 )
 parser.add_argument(
     "--feature-size", default=2048, help="size of feature (default: 2048)"
@@ -21,7 +22,8 @@ parser.add_argument(
 parser.add_argument("--num-class", default=20,
                     help="number of classes (default: )")
 parser.add_argument(
-    "--dataset-name", default="Thumos14reduced", help="dataset to train on (default: )"
+    "--dataset-name", default="Thumos14reduced",
+    help="dataset to train on (default: )"
 )
 parser.add_argument(
     "--max-seqlen",
@@ -42,12 +44,13 @@ parser.add_argument(
     default=10,
     help="value loss coefficient (default: 50)",
 )
-parser.add_argument("--seed", type=int, default=1,
+parser.add_argument("--seed", type=int, default=0,
                     help="random seed (default: 1)")
+
 parser.add_argument(
     "--max-iter",
     type=int,
-    default=20000,
+    default=15000,
     help="maximum iteration to train (default: 50000)",
 )
 
@@ -63,3 +66,7 @@ parser.add_argument(
     type=int,
     help="number of similar pairs in a batch of data  (default: 3)",
 )
+
+parser.add_argument("--beta1", type=float, default=100)
+parser.add_argument("--beta2", type=float, default=10)
+

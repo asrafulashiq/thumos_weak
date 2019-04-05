@@ -23,7 +23,8 @@ class Dataset:
         self.classlist = np.load(self.path_to_annotations + "classlist.npy")
         self.subset = np.load(self.path_to_annotations + "subset.npy")
         self.videonames = np.load(self.path_to_annotations + "videoname.npy")
-        self.batch_size = args.batch_size
+        # self.batch_size = args.batch_size
+        self.batch_size = args.num_similar * args.similar_size
         self.t_max = args.max_seqlen
         self.trainidx = []
         self.testidx = []
