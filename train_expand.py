@@ -65,19 +65,21 @@ def get_per_dis(x1, x2, w):
     x_diff = x1 - x2
 
     dis_mat = torch.pow(torch.sum(x_diff * w, -1), 2)
-    # dis_mat = torch.norm(x_diff, 2, -1)
-    # dis_mat = dis_mat.reshape(w.shape[0]**2)
 
     return dis_mat
 
 
 def WLOSS_orig(x, element_logits, weight, labels,
-               n_similar, seq_len, device, args):
+               seq_len, device, args, gt_all=None):
 
     sim_loss = 0.0
     sig = args.dis
     labels = Variable(labels)
-    for i in range(0, n_similar * args.similar_size, args.similar_size):
+
+    if gt_all is not None:
+        sim_loss_gt = 0.0
+
+    for i in range(0, args.num_similar * args.similar_size, args.similar_size):
 
         lab = labels[i, :]
         for k in range(i+1, i+args.similar_size):
@@ -114,17 +116,43 @@ def WLOSS_orig(x, element_logits, weight, labels,
         d1 = list_max_like(D1, beta=args.beta1)
         d2 = list_min_like(D2, beta=args.beta1)
 
+        # check with gt
+        if gt_all is not None:
+            gt = gt_all[common_ind].unsqueeze(1)
+            gt = get_unit_vector(gt)
+            D1_gt = get_per_dis(Xh, gt, weight[[common_ind], :])
+            D1_gt = D1_gt.reshape(args.similar_size)
+            d1_gt = list_max_like(D1_gt, beta=args.beta1)
+
+            D2_gt = get_per_dis(Xl, gt, weight[[common_ind], :])
+            D2_gt = D2_gt.reshape(args.similar_size)
+            d2_gt = list_min_like(D2_gt, beta=args.beta1)
+
+            loss_gt = max_like(d1_gt-d2_gt+sig,
+                               torch.FloatTensor([0.0]).to(device),
+                               beta=args.beta2)
+            sim_loss_gt += loss_gt
+
         loss = max_like(d1-d2+sig, torch.FloatTensor([0.0]).to(device),
                         beta=args.beta2)
 
         sim_loss += loss
 
     sim_loss = sim_loss / x.shape[0]
+    if gt_all is not None:
+        sim_loss_gt = sim_loss_gt / x.shape[0]
+        return sim_loss, sim_loss_gt
+
     return sim_loss
 
 
 def train(itr, dataset, args, model, optimizer,
           logger, device, scheduler=None):
+
+    # #### gt #####
+    # features = dataset.load_partial(is_random=True)
+    # features = torch.from_numpy(features).float().to(device)
+    # gt_features = model(Variable(features), is_tmp=True)
 
     features, labels = dataset.load_data(
         n_similar=args.num_similar,
@@ -140,10 +168,15 @@ def train(itr, dataset, args, model, optimizer,
     milloss = MILL_all(element_logits, seq_len, labels, device)
 
     weight = model.classifier.weight
-    casloss = WLOSS_orig(final_features, element_logits, weight,
-                         labels, args.num_similar,
-                         seq_len, device, args)
-    total_loss = args.Lambda * milloss + (1 - args.Lambda) * (casloss)
+    # casloss = WLOSS_orig(final_features, element_logits, weight,
+    #                      labels, args.num_similar,
+    #                      seq_len, device, args)
+    casloss, casloss2 = WLOSS_orig(final_features, element_logits, weight,
+                                   labels, seq_len, device, args, None)
+
+    # total_loss = args.Lambda * milloss + (1 - args.Lambda) * (casloss)
+    total_loss = args.Lambda * milloss + (1 - args.Lambda) * casloss
+                #  + 0.3 * casloss2
 
     if torch.isnan(total_loss):
         import pdb
