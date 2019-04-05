@@ -3,7 +3,8 @@ import numpy as np
 
 def str2ind(categoryname, classlist):
     return [
-        i for i in range(len(classlist)) if categoryname == classlist[i].decode("utf-8")
+        i for i in range(len(classlist))
+        if categoryname == classlist[i].decode("utf-8")
     ][0]
 
 
@@ -12,7 +13,8 @@ def strlist2indlist(strlist, classlist):
 
 
 def strlist2multihot(strlist, classlist):
-    return np.sum(np.eye(len(classlist))[strlist2indlist(strlist, classlist)], axis=0)
+    return np.sum(np.eye(len(classlist))[strlist2indlist(strlist, classlist)],
+                  axis=0)
 
 
 def idx2multihot(id_list, num_class):
@@ -20,15 +22,18 @@ def idx2multihot(id_list, num_class):
 
 
 def random_extract(feat, t_max):
-    r = np.random.randint(len(feat) - t_max)
-    return feat[r: r + t_max]
+    ind = np.random.choice(feat.shape[0], size=t_max)
+    ind = sorted(ind)
+    return feat[ind]
+    # r = np.random.randint(len(feat) - t_max)
+    # return feat[r: r + t_max]
 
 
 def pad(feat, min_len):
-    if np.shape(feat)[0] <= min_len:
+    if feat.shape[0] <= min_len:
         return np.pad(
             feat,
-            ((0, min_len - np.shape(feat)[0]), (0, 0)),
+            ((0, min_len - feat.shape[0]), (0, 0)),
             mode="constant",
             constant_values=0,
         )
@@ -37,7 +42,8 @@ def pad(feat, min_len):
 
 
 def fn_normalize(x):
-    return (x - np.mean(x, 0, keepdims=True)) / (np.std(x, 0, keepdims=True)+1e-10)
+    return (x - np.mean(x, 0, keepdims=True)) / \
+            (np.std(x, 0, keepdims=True)+1e-10)
 
 
 def process_feat(feat, length, normalize=False):
