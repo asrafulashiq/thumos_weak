@@ -1,7 +1,5 @@
 import numpy as np
-import glob
 import utils
-import time
 import random
 
 np.random.seed(0)
@@ -39,15 +37,15 @@ class Dataset:
         ambilist = list(open(ambilist, "r"))
         ambilist = [a.strip("\n").split(" ")[0] for a in ambilist]
 
-        # self.num_gt = 5
-        # self.gt_loc_ind = np.zeros(
-        #     (len(self.classlist), self.num_gt,
-        #     self.feature_size), dtype=np.float32
-        # )
+        self.num_gt = 5
+        self.gt_loc_ind = np.zeros(
+            (len(self.classlist), self.num_gt,
+             self.feature_size), dtype=np.float32
+        )
         self.train_test_idx()
         self.classwise_feature_mapping()
 
-        # self.get_gt_for_sup()
+        self.get_gt_for_sup()
 
         self.normalize = False
         self.mode = mode
@@ -103,7 +101,7 @@ class Dataset:
         for i, s in enumerate(self.subset):
             if s.decode("utf-8") == "validation":  # Specific to Thumos14
                 self.trainidx.append(i)
-            else:
+            elif s.decode("utf-8") == "test":
                 self.testidx.append(i)
 
     def classwise_feature_mapping(self):
