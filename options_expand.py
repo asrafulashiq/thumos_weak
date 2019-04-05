@@ -19,10 +19,10 @@ parser.add_argument(
 parser.add_argument(
     "--feature-size", default=2048, help="size of feature (default: 2048)"
 )
-parser.add_argument("--num-class", default=20,
+parser.add_argument("--num-class", default=100,
                     help="number of classes (default: )")
 parser.add_argument(
-    "--dataset-name", default="Thumos14reduced",
+    "--dataset-name", default="ActivityNet1.2",
     help="dataset to train on (default: )"
 )
 parser.add_argument(
