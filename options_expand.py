@@ -67,6 +67,6 @@ parser.add_argument(
     help="number of similar pairs in a batch of data  (default: 3)",
 )
 
-parser.add_argument("--beta1", type=float, default=100)
-parser.add_argument("--beta2", type=float, default=10)
+parser.add_argument("--beta1", type=float, default=1)
+parser.add_argument("--beta2", type=float, default=1)
 

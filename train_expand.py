@@ -88,7 +88,7 @@ def WLOSS_orig(x, element_logits, weight, labels,
         Xh = torch.Tensor()
         Xl = torch.Tensor()
 
-        for k in range(i, i+args.similar_size):
+        for k in range(i, i + args.similar_size):
             atn = F.softmax(
                 element_logits[k][:seq_len[k], [common_ind]], dim=0
             )
