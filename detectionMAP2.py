@@ -18,7 +18,7 @@ def str2ind(categoryname, classlist):
 
 def smooth(v, order=3):
     # return v
-    l = min(351, len(v))
+    l = min(100, len(v))
     l = l - (1 - l % 2)
     if len(v) <= order:
         return v

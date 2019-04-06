@@ -2,7 +2,7 @@ import argparse
 
 parser = argparse.ArgumentParser(description="WTALC")
 parser.add_argument(
-    "--lr", type=float, default=0.0002, help="learning rate (default: 0.0001)"
+    "--lr", type=float, default=0.0001, help="learning rate (default: 0.0001)"
 )
 parser.add_argument(
     "--batch-size",
@@ -25,14 +25,14 @@ parser.add_argument(
     "--dataset-name", default="ActivityNet1.2-mini",
     help="dataset to train on (default: )"
 )
-parser.add_argument(
-    "--max-seqlen",
-    default=300,
+parser.add_argupython main_detect.py -m b2_10 --beta2 10
+    "--max-seqlpython main_detect.py -m b2_10 --beta2 10
+    default=100python main_detect.py -m b2_10 --beta2 10
     type=int,
-    help="maximum sequence length during training (default: 750)",
+    help="maximpython main_detect.py -m b2_10 --beta2 10ring training (default: 750)",
 )
-parser.add_argument(
-    "--Lambda",
+parser.add_argupython main_detect.py -m b2_10 --beta2 10
+    "--Lambda",python main_detect.py -m b2_10 --beta2 10
     default=0.5,
     type=float,
     help="weight on Co-Activity Loss (default: 0.5)",
@@ -67,7 +67,7 @@ parser.add_argument(
     help="number of similar pairs in a batch of data  (default: 3)",
 )
 
-parser.add_argument("--beta1", type=float, default=1)
-parser.add_argument("--beta2", type=float, default=10)
+parser.add_argument("--beta1", type=float, default=10)
+parser.add_argument("--beta2", type=float, default=1)
 parser.add_argument("--n-top", type=int, default=8)
-parser.add_argument("--thres", type=float, default=0.05)
+parser.add_argument("--thres", type=float, default=0.01)
