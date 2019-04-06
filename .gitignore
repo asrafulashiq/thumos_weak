@@ -13,6 +13,7 @@ ckpt/*
 *.png
 *.jpg
 tmp_log/
+tmp_log_thumos/
 ActivityNet1.2-Annotations/*
 ActivityNet1.2-I3D-JOINTFeatures.npy
 ActivityNet1.2-mini-Annotations/*
