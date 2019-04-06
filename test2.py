@@ -14,6 +14,9 @@ from sklearn.metrics import accuracy_score
 
 torch.set_default_tensor_type("torch.cuda.FloatTensor")
 
+# import warnings
+# warnings.filterwarnings("error")
+
 
 def test(itr, dataset, args, model, logger, device):
 
@@ -37,7 +40,7 @@ def test(itr, dataset, args, model, logger, device):
         element_logits = element_logits.squeeze(0)
 
         topk, _ = torch.topk(element_logits,
-                             k=int(features.shape[0]/8), dim=0)
+                             k=int(features.shape[0]/args.n_top), dim=0)
 
         tmp = (
             torch.sigmoid(
@@ -56,7 +59,7 @@ def test(itr, dataset, args, model, logger, device):
     instance_logits_stack = np.array(instance_logits_stack)
     labels_stack = np.array(labels_stack)
 
-    dmap, iou = dmAP(element_logits_stack, dataset.path_to_annotations)
+    dmap, iou = dmAP(element_logits_stack, dataset.path_to_annotations, args)
 
     if args.dataset_name == "Thumos14":
         test_set = sio.loadmat("test_set_meta.mat")["test_videos"][0]

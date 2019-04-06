@@ -16,9 +16,9 @@ def str2ind(categoryname, classlist):
     return [i for i in range(len(classlist)) if categoryname == classlist[i]][0]
 
 
-def smooth(v, order=2):
+def smooth(v, order=3):
     # return v
-    l = min(order + 1, len(v))
+    l = min(351, len(v))
     l = l - (1 - l % 2)
     if len(v) <= order:
         return v
@@ -48,7 +48,7 @@ def filter_segments(segment_predict, videonames, ambilist):
     return np.array(s)
 
 
-def getLocMAP(predictions, th, annotation_path):
+def getLocMAP(predictions, th, annotation_path, args):
 
     gtsegments = np.load(annotation_path + "/segments.npy")
     gtlabels = np.load(annotation_path + "/labels.npy")
@@ -68,18 +68,26 @@ def getLocMAP(predictions, th, annotation_path):
     # keep training gtlabels for plotting
     gtltr = []
     for i, s in enumerate(subset):
-        if subset[i] == "validation" and len(gtsegments[i]):
-            gtltr.append(gtlabels[i])
+        if args.dataset_name == "Thumos14reduced":
+            if subset[i] == "validation" and len(gtsegments[i]):
+                gtltr.append(gtlabels[i])
+        else:
+            if subset[i] == "training" and len(gtsegments[i]):
+                gtltr.append(gtlabels[i])
     gtlabelstr = gtltr
 
     # Keep only the test subset annotations
     gts, gtl, vn, dn = [], [], [], []
     for i, s in enumerate(subset):
-        if subset[i] == "test":
+        if args.dataset_name == "Thumos14reduced":
+            _tmp = "test"
+        else:
+            _tmp = "validation"
+        if subset[i] == _tmp:
             gts.append(gtsegments[i])
             gtl.append(gtlabels[i])
             vn.append(videoname[i])
-            dn.append(duration[i, 0])
+            dn.append(duration[i])
     gtsegments = gts
     gtlabels = gtl
     videoname = vn
@@ -115,7 +123,7 @@ def getLocMAP(predictions, th, annotation_path):
         pp = -p
         [pp[:, i].sort() for i in range(np.shape(pp)[1])]
         pp = -pp
-        c_s = np.mean(pp[: int(np.shape(pp)[0] / 8), :], axis=0)
+        c_s = np.mean(pp[: max(1, int(np.shape(pp)[0] / args.n_top)), :], axis=0)
         ind = c_s > 0.
         c_score.append(c_s)
         predictions_mod.append(p * ind)
@@ -138,7 +146,7 @@ def getLocMAP(predictions, th, annotation_path):
             # tmp[tmp < -10] = -10
             # tmp[tmp > 5] = 5
             # tmp = (tmp - np.min(tmp))/(np.max(tmp)-np.min(tmp)+1e-10)
-            threshold = np.max(tmp) - (np.max(tmp) - np.min(tmp)) * 0.6
+            threshold = np.max(tmp) - (np.max(tmp) - np.min(tmp)) * (1-args.thres)
             # threshold = -2
             # threshold = 0.4
             vid_pred = np.concatenate(
@@ -211,12 +219,12 @@ def getLocMAP(predictions, th, annotation_path):
     return 100 * np.mean(ap)
 
 
-def getDetectionMAP(predictions, annotation_path):
+def getDetectionMAP(predictions, annotation_path, args):
     # iou_list = [0.1, 0.3, 0.5]
     iou_list = [0.1]
     dmap_list = []
     for iou in iou_list:
         print("Testing for IoU %f" % iou)
-        dmap_list.append(getLocMAP(predictions, iou, annotation_path))
+        dmap_list.append(getLocMAP(predictions, iou, annotation_path, args))
 
     return dmap_list, iou_list

@@ -33,7 +33,7 @@ class Dataset:
             for labs in self.labels
         ]
 
-        ambilist = self.path_to_annotations + "/Ambiguous_test.txt"
+        ambilist = self.path_to_annotations + "Ambiguous_test.txt"
         ambilist = list(open(ambilist, "r"))
         ambilist = [a.strip("\n").split(" ")[0] for a in ambilist]
 
@@ -98,12 +98,18 @@ class Dataset:
             return self.feat_loc
 
     def train_test_idx(self):
-        for i, s in enumerate(self.subset):
-            if s.decode("utf-8") == "validation" or \
-                s.decode("utf-8") == "training":  # Specific to Thumos14
-                self.trainidx.append(i)
-            elif s.decode("utf-8") == "test":
-                self.testidx.append(i)
+        if self.dataset_name == "Thumos14reduced":
+            for i, s in enumerate(self.subset):
+                if s.decode("utf-8") == "validation":  # Specific to Thumos14
+                    self.trainidx.append(i)
+                elif s.decode("utf-8") == "test":
+                    self.testidx.append(i)
+        else:
+            for i, s in enumerate(self.subset):
+                if s.decode("utf-8") == "training":  # Specific to Thumos14
+                    self.trainidx.append(i)
+                elif s.decode("utf-8") == "validation":
+                    self.testidx.append(i)
 
     def classwise_feature_mapping(self):
         for category in self.classlist:

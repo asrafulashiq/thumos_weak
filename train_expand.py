@@ -6,7 +6,7 @@ from torch.autograd import Variable
 torch.set_default_tensor_type("torch.cuda.FloatTensor")
 
 
-def MILL_all(element_logits, seq_len, labels, device):
+def MILL_all(element_logits, seq_len, labels, device, args):
     """ element_logits should be torch tensor of dimension
         (B, n_element, n_class),
         k should be numpy array of dimension (B,) indicating the top k
@@ -14,7 +14,7 @@ def MILL_all(element_logits, seq_len, labels, device):
         labels should be a numpy array of dimension (B, n_class) of 1 or 0
         return is a torch tensor of dimension (B, n_class) """
 
-    k = np.ceil(seq_len / 8).astype("int32")
+    k = np.ceil(seq_len / args.n_top).astype("int32")
     # labels = labels / torch.sum(labels, dim=1, keepdim=True)
     # instance_logits = torch.zeros(0).to(device)
     eps = 1e-8
@@ -165,18 +165,17 @@ def train(itr, dataset, args, model, optimizer,
 
     final_features, element_logits = model(Variable(features))
 
-    milloss = MILL_all(element_logits, seq_len, labels, device)
+    milloss = MILL_all(element_logits, seq_len, labels, device, args)
 
     weight = model.classifier.weight
     # casloss = WLOSS_orig(final_features, element_logits, weight,
     #                      labels, args.num_similar,
     #                      seq_len, device, args)
-    casloss, casloss2 = WLOSS_orig(final_features, element_logits, weight,
-                                   labels, seq_len, device, args, None)
+    casloss = WLOSS_orig(final_features, element_logits, weight,
+                         labels, seq_len, device, args, None)
 
     # total_loss = args.Lambda * milloss + (1 - args.Lambda) * (casloss)
     total_loss = args.Lambda * milloss + (1 - args.Lambda) * casloss
-                #  + 0.3 * casloss2
 
     if torch.isnan(total_loss):
         import pdb

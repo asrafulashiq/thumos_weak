@@ -47,7 +47,7 @@ mini_labels_all = np.array(mini_labels_all)
 mini_segments = np.array(mini_segments)
 
 data = np.load('./ActivityNet1.2-I3D-JOINTFeatures.npy', encoding="bytes")
-print("data loaded")
+# print("data loaded")
 
 mini_data = data[mini_idx]
 
