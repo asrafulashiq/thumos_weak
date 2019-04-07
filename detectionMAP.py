@@ -157,7 +157,7 @@ def getLocMAP(predictions, th, annotation_path):
 
 
 def getDetectionMAP(predictions, annotation_path):
-   iou_list = [0.1, 0.3, 0.5]
+   iou_list = [0.1]
    dmap_list = []
    for iou in iou_list:
       print('Testing for IoU %f' %iou)

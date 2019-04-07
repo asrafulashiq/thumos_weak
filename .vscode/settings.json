@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "/home/ash/anaconda3/envs/torch/bin/python",
+    "python.pythonPath": "/home/ashraful/anaconda3/envs/torch/bin/python",
     "python.formatting.provider": "black",
     "python.linting.pylintEnabled": false,
     "python.linting.flake8Enabled": false,
