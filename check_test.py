@@ -1,6 +1,7 @@
 import torch
 from model import Model
-from video_dataset import Dataset
+#from video_dataset import Dataset
+from dataset import Dataset
 import utils
 import numpy as np
 import matplotlib.pyplot as plt
@@ -20,24 +21,24 @@ IS_ORIGINAL = False
 
 if IS_ORIGINAL:
     from model import Model as Model
-    import options as options
+    import options_ex as options
 
     out_name = "./fig/test_figures_original.pdf"
 
 else:
     # from model import Model_detect as Model
-    import options as options
+    import options_expand as options
 
-    out_name = "./fig/test_figures_detect.pdf"
+    out_name = "./fig/test_detect_anet.pdf"
 
 
-def smooth(v, order=2):
-    return v
-    # l = min(order + 1, len(v))
-    # l = l - (1 - l % 2)
-    # if len(v) <= order:
-    #     return v
-    # return savgol_filter(v, l, order)
+def smooth(v, order=3):
+    # return v
+    l = min(100, len(v))
+    l = l - (1 - l % 2)
+    if len(v) <= order:
+        return v
+    return savgol_filter(v, l, order)
 
 
 def test(features, model, device):
@@ -97,7 +98,7 @@ if __name__ == "__main__":
     total_row = int(np.ceil(total_images / im_per_row))
     fig, _ = plt.subplots(total_row, im_per_row)
     _mul = total_images / 16.
-    fig.set_size_inches(_mul * 2, _mul * 6)
+    fig.set_size_inches(_mul * 2, _mul * 8)
     axes = fig.axes
 
     palette = sns.color_palette(None, len(dataset.classlist))
@@ -120,7 +121,7 @@ if __name__ == "__main__":
             logit = (logit - np.min(logit))/(np.max(logit)-np.min(logit)+1e-10)
             logit = smooth(logit)
 
-            pred_loc = get_pred_loc(logit, threshold=0.4)
+            pred_loc = get_pred_loc(logit, threshold=0.01)
             pred = np.zeros(len(feat))
 
             for _loc in pred_loc:

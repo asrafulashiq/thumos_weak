@@ -21,8 +21,8 @@ class Dataset:
         self.classlist = np.load(self.path_to_annotations + "classlist.npy")
         self.subset = np.load(self.path_to_annotations + "subset.npy")
         self.videonames = np.load(self.path_to_annotations + "videoname.npy")
-        # self.batch_size = args.batch_size
-        self.batch_size = args.num_similar * args.similar_size
+        self.batch_size = args.batch_size
+        #self.batch_size = args.num_similar * args.similar_size
         self.t_max = args.max_seqlen
         self.trainidx = []
         self.testidx = []
@@ -33,9 +33,12 @@ class Dataset:
             for labs in self.labels
         ]
 
-        ambilist = self.path_to_annotations + "Ambiguous_test.txt"
-        ambilist = list(open(ambilist, "r"))
-        ambilist = [a.strip("\n").split(" ")[0] for a in ambilist]
+        try:
+            ambilist = self.path_to_annotations + "Ambiguous_test.txt"
+            ambilist = list(open(ambilist, "r"))
+            ambilist = [a.strip("\n").split(" ")[0] for a in ambilist]
+        except:
+            ambilist = []
 
         self.num_gt = 5
         # self.gt_loc_ind = np.zeros(
@@ -188,3 +191,10 @@ class Dataset:
         )
         labels = np.array([self.labels_multihot[i] for i in indices])
         return data, labels
+
+    def load_one_test_with_segment(self):
+        for idx in self.testidx:
+            feat = self.features[idx]
+            labs = self._labels[idx]
+            seg = self.segments[idx]
+            yield np.array(feat), np.array(labs), np.array(seg)

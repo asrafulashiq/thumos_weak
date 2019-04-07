@@ -3,9 +3,11 @@ import argparse
 import os
 import torch
 from model import Model
-from video_dataset2 import Dataset
+#from video_dataset2 import Dataset
+from dataset import Dataset
+
 from test import test
-from train2 import train
+from train import train
 from tensorboard_logger import Logger
 import options
 import torch.optim as optim
@@ -35,6 +37,6 @@ if __name__ == '__main__':
         train(itr, dataset, args, model, optimizer, logger, device)
         if itr % 500 == 0 and not itr == 0:
             torch.save(model.state_dict(), './ckpt/' + args.model_name + '.pkl')
-        if itr % 100 == 0 and not itr == 0:
+        if itr % 50 == 0 and not itr == 0:
             test(itr, dataset, args, model, logger, device)
     # test_all(dataset, args, model, device)

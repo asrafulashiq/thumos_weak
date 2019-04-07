@@ -12,9 +12,9 @@ def str2ind(categoryname, classlist):
     return [i for i in range(len(classlist)) if categoryname == classlist[i]][0]
 
 
-def smooth(v, order=2):
+def smooth(v, order=3):
     # return v
-    l = min(order + 1, len(v))
+    l = min(351, len(v))
     l = l - (1 - l % 2)
     if len(v) <= order:
         return v
@@ -58,8 +58,11 @@ def getLocMAP(predictions, th, annotation_path):
     duration = np.load(annotation_path + "/duration.npy")
     ambilist = annotation_path + "/Ambiguous_test.txt"
 
-    ambilist = list(open(ambilist, "r"))
-    ambilist = [a.strip("\n").split(" ") for a in ambilist]
+    try:
+        ambilist = list(open(ambilist, "r"))
+        ambilist = [a.strip("\n").split(" ") for a in ambilist]
+    except:
+        ambilist = []
 
     # keep training gtlabels for plotting
     gtltr = []
@@ -202,7 +205,7 @@ def getLocMAP(predictions, th, annotation_path):
 
 def getDetectionMAP(predictions, annotation_path):
     # iou_list = [0.1, 0.3, 0.5]
-    iou_list = [0.1]
+    iou_list = [0.5]
     dmap_list = []
     for iou in iou_list:
         print("Testing for IoU %f" % iou)

@@ -59,3 +59,5 @@ parser.add_argument("--test", action='store_true')
 parser.add_argument("--similar-size", type=int, default=2,
                     help="how many instances of similar type will be there")
 
+parser.add_argument("--n-top", type=int, default=8)
+parser.add_argument("--thres", type=float, default=0.5)

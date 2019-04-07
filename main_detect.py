@@ -45,7 +45,7 @@ if __name__ == "__main__":
 
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.0005)
     # optimizer = optim.SGD(model.parameters(), lr=args.lr,
-    #                       weight_decay=0.0005)
+    #                      weight_decay=0.0005)
     init_itr = 0
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
         optimizer, [6000, 10000, 15000], 0.5
