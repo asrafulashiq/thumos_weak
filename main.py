@@ -3,7 +3,7 @@ import argparse
 import os
 import torch
 from model import Model
-from video_dataset import Dataset
+from dataset import Dataset
 from test import test
 from train import train
 from tensorboard_logger import Logger

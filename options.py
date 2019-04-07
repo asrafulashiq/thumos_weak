@@ -25,7 +25,7 @@ parser.add_argument(
     help="maximum sequence length during training (default: 750)",
 )
 parser.add_argument(
-    "--Lambda", default=0.5, help="weight on Co-Activity Loss (default: 0.5)"
+    "--Lambda", type=float, default=0.5, help="weight on Co-Activity Loss (default: 0.5)"
 )
 parser.add_argument(
     "--num-similar",

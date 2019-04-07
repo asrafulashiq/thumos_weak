@@ -17,7 +17,7 @@ def str2ind(categoryname, classlist):
 
 
 def smooth(v, order=3):
-    return v
+    #return v
     l = min(351, len(v))
     l = l - (1 - l % 2)
     if len(v) <= order:
@@ -159,7 +159,7 @@ def getLocMAP(predictions, th, annotation_path, args):
                 aggr_score = np.max(tmp[s[j] : e[j]]) + 0.7 * c_score[i][c]
                 if e[j] - s[j] >= 2:
                     segment_predict.append(
-                        [i, s[j], e[j], np.max(tmp[s[j]: e[j]]) + 0. * c_score[i][c]]
+                        [i, s[j], e[j], np.max(tmp[s[j]: e[j]]) + 0.7 * c_score[i][c]]
                     )
                     detection_results[i].append(
                         [
@@ -219,7 +219,7 @@ def getLocMAP(predictions, th, annotation_path, args):
 
 def getDetectionMAP(predictions, annotation_path, args):
     # iou_list = [0.1, 0.3, 0.5]
-    iou_list = [0.1]
+    iou_list = [0.5]
     dmap_list = []
     for iou in iou_list:
         print("Testing for IoU %f" % iou)

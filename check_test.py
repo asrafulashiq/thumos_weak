@@ -121,7 +121,7 @@ if __name__ == "__main__":
             logit = (logit - np.min(logit))/(np.max(logit)-np.min(logit)+1e-10)
             logit = smooth(logit)
 
-            pred_loc = get_pred_loc(logit, threshold=0.01)
+            pred_loc = get_pred_loc(logit, threshold=0.5)
             pred = np.zeros(len(feat))
 
             for _loc in pred_loc:

@@ -7,7 +7,7 @@ parser.add_argument(
 parser.add_argument(
     "--batch-size",
     type=int,
-    default=20,
+    default=10,
     help="number of instances in a batch of data (default: 10)",
 )
 parser.add_argument("--model-name", "-m", default="weakloc",
@@ -27,7 +27,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--max-seqlen",
-    default=300,
+    default=750,
     type=int,
     help="maximring training (default: 750)",
 )
@@ -58,11 +58,11 @@ parser.add_argument("--dis", type=float, default=3, help="distance thres")
 
 parser.add_argument("--test", action='store_true')
 
-parser.add_argument("--similar-size", type=int, default=4,
+parser.add_argument("--similar-size", type=int, default=2,
                     help="how many instances of similar type will be there")
 parser.add_argument(
     "--num-similar",
-    default=5,
+    default=3,
     type=int,
     help="number of similar pairs in a batch of data  (default: 3)",
 )
@@ -70,4 +70,4 @@ parser.add_argument(
 parser.add_argument("--beta1", type=float, default=1)
 parser.add_argument("--beta2", type=float, default=1)
 parser.add_argument("--n-top", type=int, default=8)
-parser.add_argument("--thres", type=float, default=0.4)
+parser.add_argument("--thres", type=float, default=0.5)

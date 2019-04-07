@@ -16,7 +16,7 @@ from test2 import test
 # from train_new import train
 # import options
 
-from train_expand import train
+from train import train
 from dataset import Dataset
 
 from tensorboard_logger import Logger
@@ -67,12 +67,8 @@ if __name__ == "__main__":
 
     best_dmap_itr = (0, init_itr)
     for itr in range(init_itr, args.max_iter):
-        # train(itr, dataset, args, model, optimizer, logger, device,
-        #       valid=args.valid, scheduler=None)
         train(
-            itr, dataset, args, model, optimizer, logger, device,
-            scheduler=None
-        )
+            itr, dataset, args, model, optimizer, logger, device)
         if itr % 200 == 0 and not itr == 0:
             if type(model) == torch.nn.DataParallel:
                 model_state = model.module.state_dict()
@@ -87,12 +83,10 @@ if __name__ == "__main__":
                 "./ckpt/anet/" + args.model_name + ".pkl",
             )
         if itr % 100 == 0 and not itr == 0:
-            # test(itr, dataset, args, model, logger,
-            #      device, is_detect=True, is_score=False)
-            dmap = test(itr, dataset, args, model, logger, device)
-            if dmap > best_dmap_itr[0]:
-                best_dmap_itr = (dmap, itr)
+            test(itr, dataset, args, model, logger, device)
+            # if dmap > best_dmap_itr[0]:
+            #     best_dmap_itr = (dmap, itr)
 
-    print()
-    print(
-     f"Best Detection mAP : {best_dmap_itr[0]:.3f} @iter {best_dmap_itr[1]}")
+#    print()
+#    print(
+#     f"Best Detection mAP : {best_dmap_itr[0]:.3f} @iter {best_dmap_itr[1]}")

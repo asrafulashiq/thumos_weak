@@ -5,17 +5,22 @@ import sys
 import scipy.io as sio
 
 
+#import warnings
+#warnings.filterwarnings("error")
+
+
 def str2ind(categoryname, classlist):
     return [i for i in range(len(classlist)) if categoryname == classlist[i]][0]
 
 
 def smooth(v):
     return v
-    # l = min(351, len(v)); l = l - (1-l%2)
-    # if len(v) <= 3:
-    #   return v
-    # return savgol_filter(v, l, 1) #savgol_filter(v, l, 1) #0.5*(np.concatenate([v[1:],v[-1:]],axis=0) + v)
-
+    '''
+    l = min(3, len(v)); l = l - (1-l%2)
+    if len(v) <= 3:
+      return v
+    return savgol_filter(v, l, 1) #savgol_filter(v, l, 1) #0.5*(np.concatenate([v[1:],v[-1:]],axis=0) + v)
+'''
 
 def filter_segments(segment_predict, videonames, ambilist):
     ind = np.zeros(np.shape(segment_predict)[0])
@@ -107,6 +112,8 @@ def getLocMAP(predictions, th, annotation_path):
         [pp[:, i].sort() for i in range(np.shape(pp)[1])]
         pp = -pp
         c_s = np.mean(pp[: int(np.shape(pp)[0] / 8), :], axis=0)
+        if pp.shape[0] < 8:
+            import pdb; pdb.set_trace()
         ind = c_s > 0.0
         c_score.append(c_s)
         new_pred = np.zeros((np.shape(p)[0], np.shape(p)[1]), dtype="float32")

@@ -125,7 +125,7 @@ class Dataset:
 
             self.classwiseidx.append(idx)
 
-    def load_data(self, n_similar=0, is_training=True, similar_size=2):
+    def load_data(self, n_similar=3, is_training=True, similar_size=2):
         if is_training:
             labels = []
             idx = []

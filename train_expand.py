@@ -6,6 +6,27 @@ from torch.autograd import Variable
 torch.set_default_tensor_type("torch.cuda.FloatTensor")
 
 
+def MILL(element_logits, seq_len, labels, device, args):
+    """ element_logits should be torch tensor of dimension (B, n_element, n_class),
+         k should be numpy array of dimension (B,) indicating the top k locations to average over,
+         labels should be a numpy array of dimension (B, n_class) of 1 or 0
+         return is a torch tensor of dimension (B, n_class) """
+
+    k = np.ceil(seq_len / 8).astype("int32")
+    labels = labels / torch.sum(labels, dim=1, keepdim=True)
+    instance_logits = torch.zeros(0).to(device)
+    for i in range(element_logits.shape[0]):
+        tmp, _ = torch.topk(element_logits[i][: seq_len[i]], k=int(k[i]), dim=0)
+        instance_logits = torch.cat(
+            [instance_logits, torch.mean(tmp, 0, keepdim=True)], dim=0
+        )
+    milloss = -torch.mean(
+        torch.sum(Variable(labels) * F.log_softmax(instance_logits, dim=1), dim=1),
+        dim=0,
+    )
+    return milloss
+
+
 def MILL_all(element_logits, seq_len, labels, device, args):
     """ element_logits should be torch tensor of dimension
         (B, n_element, n_class),
@@ -170,30 +191,31 @@ def train(itr, dataset, args, model, optimizer,
 
     final_features, element_logits = model(Variable(features))
 
-    milloss = MILL_all(element_logits, seq_len, labels, device, args)
+    milloss = MILL(element_logits, seq_len, labels, device, args)
 
     weight = model.classifier.weight
     # casloss = WLOSS_orig(final_features, element_logits, weight,
     #                      labels, args.num_similar,
     #                      seq_len, device, args)
-    casloss = WLOSS_orig(final_features, element_logits, weight,
-                         labels, seq_len, device, args, None)
+    #casloss = WLOSS_orig(final_features, element_logits, weight,
+    #                     labels, seq_len, device, args, None)
 
     # total_loss = args.Lambda * milloss + (1 - args.Lambda) * (casloss)
-    total_loss = args.Lambda * milloss + (1 - args.Lambda) * casloss
+    total_loss = args.Lambda * milloss #+ (1 - args.Lambda) * casloss
 
     if torch.isnan(total_loss):
         import pdb
         pdb.set_trace()
 
     logger.log_value("milloss", milloss, itr)
-    logger.log_value('casloss', casloss, itr)
+    #logger.log_value('casloss', casloss, itr)
     logger.log_value("total_loss", total_loss, itr)
 
     print("Iteration: %d, Loss: %.3f" % (itr, total_loss.data.cpu().numpy()))
 
     optimizer.zero_grad()
     total_loss.backward()
+    torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
     optimizer.step()
 
     if scheduler:
