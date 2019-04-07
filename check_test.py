@@ -13,6 +13,7 @@ import torch.nn.functional as F
 from tqdm import tqdm
 import scipy.io as sio
 from scipy.signal import savgol_filter
+from matplotlib.backends.backend_pdf import PdfPages
 
 
 torch.set_default_tensor_type('torch.cuda.FloatTensor')
@@ -21,20 +22,19 @@ IS_ORIGINAL = False
 
 if IS_ORIGINAL:
     from model import Model as Model
-    import options_ex as options
-
+    import options as options
     out_name = "./fig/test_figures_original.pdf"
 
 else:
     # from model import Model_detect as Model
     import options_expand as options
-
     out_name = "./fig/test_detect_anet.pdf"
+
 
 
 def smooth(v, order=3):
     # return v
-    l = min(100, len(v))
+    l = min(200, len(v))
     l = l - (1 - l % 2)
     if len(v) <= order:
         return v
@@ -93,13 +93,23 @@ if __name__ == "__main__":
             model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
 
+    plt.close('all')
     total_images = len(dataset.testidx)
     im_per_row = 4
-    total_row = int(np.ceil(total_images / im_per_row))
-    fig, _ = plt.subplots(total_row, im_per_row)
-    _mul = total_images / 16.
-    fig.set_size_inches(_mul * 2, _mul * 8)
-    axes = fig.axes
+    row_per_page = 8
+    total_pages = int(np.ceil(total_images / (im_per_row*row_per_page)))
+
+    pdf = PdfPages(out_name)
+
+    figs = []
+    axes = []
+    for cnt in range(total_pages):
+        _fig, _ax = plt.subplots(row_per_page, im_per_row)
+        _fig.set_size_inches(10, 15)
+        figs.append(_fig)
+        axes.extend(_ax.flatten())
+    # fig.set_size_inches(_mul * 2, _mul * 8)
+    # axes = fig.axes
 
     palette = sns.color_palette(None, len(dataset.classlist))
     # palette = np.array(palette)
@@ -116,8 +126,6 @@ if __name__ == "__main__":
         for classname in np.unique(labs):
             cls_idx = utils.str2ind(classname, dataset.classlist)
             logit = element_logits[:, cls_idx]
-            # logit[logit < 0] = 0
-            # logit[logit > 2] = 2
             logit = (logit - np.min(logit))/(np.max(logit)-np.min(logit)+1e-10)
             logit = smooth(logit)
 
@@ -145,5 +153,8 @@ if __name__ == "__main__":
         ax.set_yticks([0, 0.2, 0.4, 0.5, 0.6, 0.8])
         ax.set_title(",".join([ii[:4] for ii in np.unique(labs)]))
         ax.set_ylim(-0.05, 1.1)
-    fig.tight_layout()
-    fig.savefig(out_name)
+    for fig in figs:
+        fig.tight_layout()
+        pdf.savefig(fig)
+    plt.close('all')
+    pdf.close()
