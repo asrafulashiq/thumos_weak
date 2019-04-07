@@ -5,20 +5,16 @@ import sys
 import scipy.io as sio
 
 
-np.random.seed(0)
-
-
 def str2ind(categoryname, classlist):
     return [i for i in range(len(classlist)) if categoryname == classlist[i]][0]
 
 
-def smooth(v, order=3):
-    # return v
-    l = min(351, len(v))
-    l = l - (1 - l % 2)
-    if len(v) <= order:
-        return v
-    return savgol_filter(v, l, order)
+def smooth(v):
+    return v
+    # l = min(351, len(v)); l = l - (1-l%2)
+    # if len(v) <= 3:
+    #   return v
+    # return savgol_filter(v, l, 1) #savgol_filter(v, l, 1) #0.5*(np.concatenate([v[1:],v[-1:]],axis=0) + v)
 
 
 def filter_segments(segment_predict, videonames, ambilist):
@@ -48,7 +44,7 @@ def getLocMAP(predictions, th, annotation_path):
 
     gtsegments = np.load(annotation_path + "/segments.npy")
     gtlabels = np.load(annotation_path + "/labels.npy")
-    # gtlabels = np.load(annotation_path + '/labels.npy')
+    gtlabels = np.load(annotation_path + "/labels.npy")
     videoname = np.load(annotation_path + "/videoname.npy")
     videoname = np.array([v.decode("utf-8") for v in videoname])
     subset = np.load(annotation_path + "/subset.npy")
@@ -58,11 +54,8 @@ def getLocMAP(predictions, th, annotation_path):
     duration = np.load(annotation_path + "/duration.npy")
     ambilist = annotation_path + "/Ambiguous_test.txt"
 
-    try:
-        ambilist = list(open(ambilist, "r"))
-        ambilist = [a.strip("\n").split(" ") for a in ambilist]
-    except:
-        ambilist = []
+    ambilist = list(open(ambilist, "r"))
+    ambilist = [a.strip("\n").split(" ") for a in ambilist]
 
     # keep training gtlabels for plotting
     gtltr = []
@@ -106,8 +99,7 @@ def getLocMAP(predictions, th, annotation_path):
     for t in templabelcategories:
         templabelidx.append(str2ind(t, classlist))
 
-    # process the predictions such that classes having greater than a
-    # certain threshold are detected only
+    # process the predictions such that classes having greater than a certain threshold are detected only
     predictions_mod = []
     c_score = []
     for p in predictions:
@@ -115,9 +107,9 @@ def getLocMAP(predictions, th, annotation_path):
         [pp[:, i].sort() for i in range(np.shape(pp)[1])]
         pp = -pp
         c_s = np.mean(pp[: int(np.shape(pp)[0] / 8), :], axis=0)
-        ind = c_s > 0
+        ind = c_s > 0.0
         c_score.append(c_s)
-        # new_pred = np.zeros((np.shape(p)[0],np.shape(p)[1]), dtype='float32')
+        new_pred = np.zeros((np.shape(p)[0], np.shape(p)[1]), dtype="float32")
         predictions_mod.append(p * ind)
     predictions = predictions_mod
 
@@ -204,11 +196,11 @@ def getLocMAP(predictions, th, annotation_path):
 
 
 def getDetectionMAP(predictions, annotation_path):
-    # iou_list = [0.1, 0.3, 0.5]
-    iou_list = [0.5]
+    iou_list = [0.1]
     dmap_list = []
     for iou in iou_list:
         print("Testing for IoU %f" % iou)
         dmap_list.append(getLocMAP(predictions, iou, annotation_path))
 
     return dmap_list, iou_list
+
