@@ -2,12 +2,12 @@ from __future__ import print_function
 import argparse
 import os
 import torch
-from model import Model
-from video_dataset2 import Dataset
+from model import Model_orig as Model
+from video_dataset import Dataset
 from test import test
-from train2 import train
+from train import train
 from tensorboard_logger import Logger
-import options
+import options_expand as options
 import torch.optim as optim
 torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
@@ -16,6 +16,7 @@ if __name__ == '__main__':
     args = options.parser.parse_args()
     torch.manual_seed(args.seed)
     device = torch.device("cuda")
+    print(args)
 
     dataset = Dataset(args)
     if not os.path.exists('./ckpt/'):

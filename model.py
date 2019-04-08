@@ -19,6 +19,22 @@ def weights_init(m):
             pass
 
 
+class Model_orig(torch.nn.Module):
+    def __init__(self, n_feature, n_class):
+        super(Model_orig, self).__init__()
+        self.fc = nn.Linear(n_feature, n_feature)
+        self.classifier = nn.Linear(n_feature, n_class)
+        self.dropout = nn.Dropout(0.7)
+        self.apply(weights_init)
+
+    def forward(self, inputs, is_training=True):
+
+        x = F.relu(self.fc(inputs))
+        if is_training:
+            x = self.dropout(x)
+        return x, self.classifier(x)
+
+
 class Model(torch.nn.Module):
     def __init__(self, n_feature, n_class):
         super(Model, self).__init__()
@@ -30,8 +46,6 @@ class Model(torch.nn.Module):
         # self.fc1 = nn.Linear(n_feature, n_feature)
         self.classifier = nn.Linear(n_feature, n_class, bias=True)
         self.dropout = nn.Dropout(0.7)
-
-        # self.atn = nn.Linear(n_feature, 1)
 
         self.apply(weights_init)
 
@@ -141,9 +155,9 @@ class Model_detect(nn.Module):
 
         self.drop1 = nn.Dropout(dropout_rate)
 
-        self.tcn = tcn(n_feature, [n_feature], kernel_size=2, dropout=0.7)
+        self.tcn = tcn(n_feature, [n_feature//4], kernel_size=2, dropout=0.5)
 
-        self.classifier = nn.Linear(n_feature, n_class, bias=False)
+        self.classifier = nn.Linear(n_feature//4, n_class)
 
         self.apply(weights_init)
 
@@ -164,37 +178,45 @@ class Model_detect(nn.Module):
         return x, x_class
 
 
-class Model_tcn(torch.nn.Module):
-    def __init__(self, n_feature, n_class, dropout_rate=0.5, tlen=750):
+class Chomp1d(nn.Module):
+    def __init__(self, chomp_size):
+        super(Chomp1d, self).__init__()
+        self.chomp_size = chomp_size
+
+    def forward(self, x):
+        if self.chomp_size == 0:
+            return x
+        else:
+            return x[:, :, :-self.chomp_size].contiguous()
+
+
+class Model_tcn(nn.Module):
+    def __init__(self, n_feature, n_class, down_rate=2, dropout_rate=0.7):
         super(Model_tcn, self).__init__()
-        self.n_class = n_class
-        self.n_feature = n_feature
-        self.test_fc = nn.Linear(n_feature, 512)
-        self.bn = nn.BatchNorm1d(512)
-        self.relu = nn.ReLU()
 
-        self.tcn = tcn(512, [512], kernel_size=1, dropout=0.5)
+        self.init_fc = nn.Linear(n_feature, n_feature)
 
-        # self.pool = nn.AdaptiveMaxPool1d(1)
-        self.spatial_pool = SpatialAttention(512)
+        self.drop1 = nn.Dropout(dropout_rate)
 
-        self.temp_pool = TemporalAttention(512)
+        # self.tcn = tcn(n_feature, [n_feature//4], kernel_size=2, dropout=0.5)
 
-        self.conv_class = nn.Linear(512, n_class, bias=False)
+        self.classifier = nn.Conv1d(n_feature, n_class, kernel_size = 3,
+                                stride=1, padding=1, dilation=1)
+        # self.chomp = Chomp1d(1)
 
-        self.drop = nn.Dropout(dropout_rate)
+        self.apply(weights_init)
 
-    def forward(self, inputs, is_training=True):
+    def forward(self, inputs, is_training=True, is_tmp=False):
+        # N, L, Cin
+        if len(inputs.shape) < 3:
+            inputs = inputs.unsqueeze(0)
+        x = self.drop1(F.relu(self.init_fc(inputs)))
 
-        # input shape : (N, L, Cin)
-        x_refine = self.drop(self.relu(self.test_fc(inputs)))  # (N, L, 512)
-        x = x_refine.transpose(-1, -2)  # (N, 512, L)
+        x_class = self.classifier(x.transpose(-2, -1))
+        # x_class = self.chomp(x_class)
+        x_class = x_class.transpose(-2, -1)
 
-        x_max = nn.AdaptiveMaxPool1d(1)(x)  # N, 512, 1
+        x = x.squeeze(0)
+        x_class = x_class.squeeze(0)
 
-        x_cls = x_max.squeeze(-1)  # N, 512
-        x_cls = self.conv_class(x_cls)  # N, 20
-
-        x_all = self.conv_class(x_refine)
-
-        return x_cls, x_all
+        return x, x_class
