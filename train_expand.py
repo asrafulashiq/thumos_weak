@@ -130,11 +130,11 @@ def WLOSS_orig(x, element_logits, weight, labels,
 
         D1 = get_per_dis(Xh, Xh, weight[[common_ind], :])
 
-        D1 = torch.triu(D1)
-        d1 = torch.sum(D1) / (args.similar_size*(args.similar_size+1)/2)
+        # D1 = torch.triu(D1)
+        # d1 = torch.sum(D1) / (args.similar_size*(args.similar_size+1)/2)
 
         D1 = D1.reshape(args.similar_size**2)
-        # d1 = list_max_like(D1, beta=args.beta1)
+        d1 = list_max_like(D1, beta=args.beta1)
 
 
         D2 = get_per_dis(Xh, Xl, weight[[common_ind], :])
@@ -143,21 +143,21 @@ def WLOSS_orig(x, element_logits, weight, labels,
         d2 = list_min_like(D2, beta=args.beta1)
 
         # check with gt
-        # if gt_all is not None:
-        #     gt = gt_all[common_ind].unsqueeze(1)
-        #     gt = get_unit_vector(gt)
-        #     D1_gt = get_per_dis(Xh, gt, weight[[common_ind], :])
-        #     D1_gt = D1_gt.reshape(args.similar_size)
-        #     d1_gt = list_max_like(D1_gt, beta=args.beta1)
+        if gt_all is not None:
+            gt = gt_all[common_ind].unsqueeze(1)
+            gt = get_unit_vector(gt)
+            D1_gt = get_per_dis(Xh, gt, weight[[common_ind], :])
+            D1_gt = D1_gt.reshape(args.similar_size)
+            d1_gt = list_max_like(D1_gt, beta=args.beta1)
 
-        #     D2_gt = get_per_dis(Xl, gt, weight[[common_ind], :])
-        #     D2_gt = D2_gt.reshape(args.similar_size)
-        #     d2_gt = list_min_like(D2_gt, beta=args.beta1)
+            D2_gt = get_per_dis(Xl, gt, weight[[common_ind], :])
+            D2_gt = D2_gt.reshape(args.similar_size)
+            d2_gt = list_min_like(D2_gt, beta=args.beta1)
 
-        #     loss_gt = max_like(d1_gt-d2_gt+sig,
-        #                        torch.FloatTensor([0.0]).to(device),
-        #                        beta=args.beta2)
-        #     sim_loss_gt += loss_gt
+            loss_gt = max_like(d1_gt-d2_gt+sig,
+                               torch.FloatTensor([0.0]).to(device),
+                               beta=args.beta2)
+            sim_loss_gt += loss_gt
 
         loss = max_like(d1-d2+sig, torch.FloatTensor([0.0]).to(device),
                         beta=args.beta2)
@@ -176,9 +176,9 @@ def train(itr, dataset, args, model, optimizer,
           logger, device, scheduler=None):
 
     # #### gt #####
-    # features = dataset.load_partial(is_random=True)
-    # features = torch.from_numpy(features).float().to(device)
-    # gt_features = model(Variable(features), is_tmp=True)
+    features = dataset.load_partial(is_random=True)
+    features = torch.from_numpy(features).float().to(device)
+    gt_features = model(Variable(features), is_tmp=True)
 
     features, labels = dataset.load_data(
         n_similar=args.num_similar,
@@ -194,10 +194,10 @@ def train(itr, dataset, args, model, optimizer,
     milloss = MILL_all(element_logits, seq_len, labels, device, args)
 
     weight = model.classifier.weight
-    casloss = WLOSS_orig(final_features, element_logits, weight,
-                        labels, seq_len, device, args, None)
+    casloss, casloss2 = WLOSS_orig(final_features, element_logits, weight,
+                        labels, seq_len, device, args, gt_features)
 
-    total_loss = args.Lambda * milloss + (1 - args.Lambda) * casloss
+    total_loss = milloss + args.Lambda * casloss + 0.2 * casloss2
 
     if torch.isnan(total_loss):
         import pdb

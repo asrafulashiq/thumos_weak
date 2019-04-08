@@ -40,15 +40,15 @@ class Dataset:
         except:
             ambilist = []
 
-        self.num_gt = 5
-        # self.gt_loc_ind = np.zeros(
-        #     (len(self.classlist), self.num_gt,
-        #      self.feature_size), dtype=np.float32
-        # )
         self.train_test_idx()
         self.classwise_feature_mapping()
 
-        # self.get_gt_for_sup()
+        self.num_gt = 5
+        self.gt_loc_ind = np.zeros(
+            (len(self.classlist), self.num_gt,
+             self.feature_size), dtype=np.float32
+        )
+        self.get_gt_for_sup()
 
         self.normalize = False
         self.mode = mode
