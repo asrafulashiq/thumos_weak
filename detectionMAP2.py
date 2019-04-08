@@ -16,13 +16,13 @@ def str2ind(categoryname, classlist):
     return [i for i in range(len(classlist)) if categoryname == classlist[i]][0]
 
 
-def smooth(v, order=3):
+def smooth(v, order=1):
     #return v
-    l = min(100, len(v))
+    l = min(200, len(v))
     l = l - (1 - l % 2)
     if len(v) <= order:
         return v
-    return savgol_filter(v, l, order)
+    return savgol_filter(v, l, 1)
 
 
 def filter_segments(segment_predict, videonames, ambilist):

@@ -29,7 +29,7 @@ parser.add_argument(
     "--max-seqlen",
     default=300,
     type=int,
-    help="maximring training (default: 750)",
+    help="maximum training (default: 750)",
 )
 parser.add_argument(
     "--Lambda",
@@ -70,4 +70,4 @@ parser.add_argument(
 parser.add_argument("--beta1", type=float, default=1)
 parser.add_argument("--beta2", type=float, default=1)
 parser.add_argument("--n-top", type=int, default=8)
-parser.add_argument("--thres", type=float, default=0.4)
+parser.add_argument("--thres", type=float, default=0.3)
