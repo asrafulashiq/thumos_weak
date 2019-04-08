@@ -34,7 +34,7 @@ else:
 
 def smooth(v, order=3):
     # return v
-    l = min(200, len(v))
+    l = min(10, len(v))
     l = l - (1 - l % 2)
     if len(v) <= order:
         return v
@@ -56,6 +56,10 @@ def test(features, model, device):
     # x_class = torch.sigmoid(x_class)
     element_logits = x_class.cpu().data.numpy()
     return element_logits  # vid_len, cls
+
+
+def sigmoid(x, beta=0.5):
+    return 1 / (1+np.exp(-beta * x))
 
 
 def get_pred_loc(x, threshold=0.1):
@@ -126,8 +130,9 @@ if __name__ == "__main__":
         for classname in np.unique(labs):
             cls_idx = utils.str2ind(classname, dataset.classlist)
             logit = element_logits[:, cls_idx]
-            logit = (logit - np.min(logit))/(np.max(logit)-np.min(logit)+1e-10)
             logit = smooth(logit)
+            logit = sigmoid(logit)
+            logit = (logit - np.min(logit))/(np.max(logit)-np.min(logit)+1e-10)
 
             pred_loc = get_pred_loc(logit, threshold=0.5)
             pred = np.zeros(len(feat))

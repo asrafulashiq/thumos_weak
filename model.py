@@ -23,23 +23,20 @@ class Model(torch.nn.Module):
     def __init__(self, n_feature, n_class):
         super(Model, self).__init__()
 
-        #self.init_fc = nn.Linear(n_feature, n_feature)
+        self.init_fc = nn.Linear(n_feature, n_feature)
         self.init_drop = nn.Dropout(0.7)
 
         self.fc = nn.Linear(n_feature, n_feature)
-        # self.fc1 = nn.Linear(n_feature, n_feature)
         self.classifier = nn.Linear(n_feature, n_class, bias=True)
         self.dropout = nn.Dropout(0.7)
-
-        # self.atn = nn.Linear(n_feature, 1)
 
         self.apply(weights_init)
 
     def forward(self, inputs, is_training=True, is_tmp=False):
 
-        #inputs = F.relu(self.init_fc(inputs))
-        #if is_training:
-        #    inputs = self.init_drop(inputs)
+        inputs = F.relu(self.init_fc(inputs))
+        if is_training:
+           inputs = self.init_drop(inputs)
         x = F.relu(self.fc(inputs))
         if is_training:
             x = self.dropout(x)

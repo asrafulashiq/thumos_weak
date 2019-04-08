@@ -16,7 +16,7 @@ from test2 import test
 # from train_new import train
 # import options
 
-from train import train
+from train_expand import train
 from dataset import Dataset
 
 from tensorboard_logger import Logger

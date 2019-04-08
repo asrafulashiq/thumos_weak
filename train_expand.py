@@ -191,24 +191,20 @@ def train(itr, dataset, args, model, optimizer,
 
     final_features, element_logits = model(Variable(features))
 
-    milloss = MILL(element_logits, seq_len, labels, device, args)
+    milloss = MILL_all(element_logits, seq_len, labels, device, args)
 
     weight = model.classifier.weight
-    # casloss = WLOSS_orig(final_features, element_logits, weight,
-    #                      labels, args.num_similar,
-    #                      seq_len, device, args)
-    #casloss = WLOSS_orig(final_features, element_logits, weight,
-    #                     labels, seq_len, device, args, None)
+    casloss = WLOSS_orig(final_features, element_logits, weight,
+                        labels, seq_len, device, args, None)
 
-    # total_loss = args.Lambda * milloss + (1 - args.Lambda) * (casloss)
-    total_loss = args.Lambda * milloss #+ (1 - args.Lambda) * casloss
+    total_loss = args.Lambda * milloss + (1 - args.Lambda) * casloss
 
     if torch.isnan(total_loss):
         import pdb
         pdb.set_trace()
 
     logger.log_value("milloss", milloss, itr)
-    #logger.log_value('casloss', casloss, itr)
+    logger.log_value('casloss', casloss, itr)
     logger.log_value("total_loss", total_loss, itr)
 
     print("Iteration: %d, Loss: %.3f" % (itr, total_loss.data.cpu().numpy()))

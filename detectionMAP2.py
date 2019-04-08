@@ -8,8 +8,8 @@ import scipy.io as sio
 np.random.seed(0)
 
 
-def sigmoid(x, eps=1e-10):
-    return 1/(1+np.exp(-x) + eps)
+def sigmoid(x, eps=1e-10, alpha=1):
+    return 1/(1+np.exp(-alpha * x) + eps)
 
 
 def str2ind(categoryname, classlist):
@@ -18,7 +18,7 @@ def str2ind(categoryname, classlist):
 
 def smooth(v, order=3):
     #return v
-    l = min(351, len(v))
+    l = min(100, len(v))
     l = l - (1 - l % 2)
     if len(v) <= order:
         return v
@@ -146,7 +146,9 @@ def getLocMAP(predictions, th, annotation_path, args):
             tmp = smooth(predictions[i][:, c])
             if np.isnan(tmp).any():
                 import pdb; pdb.set_trace()
+            # tmp = sigmoid(tmp, alpha=0.2)
             threshold = np.max(tmp) - (np.max(tmp) - np.min(tmp)) * (1-args.thres)
+            # threshold = args.thres
             vid_pred = np.concatenate(
                 [np.zeros(1), (tmp > threshold).astype("float32"), np.zeros(1)], axis=0
             )
@@ -218,8 +220,10 @@ def getLocMAP(predictions, th, annotation_path, args):
 
 
 def getDetectionMAP(predictions, annotation_path, args):
-    # iou_list = [0.1, 0.3, 0.5]
-    iou_list = [0.5]
+    if args.test:
+        iou_list = [0.3, 0.5]
+    else:
+        iou_list = [0.3]
     dmap_list = []
     for iou in iou_list:
         print("Testing for IoU %f" % iou)
