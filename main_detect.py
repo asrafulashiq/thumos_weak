@@ -67,13 +67,11 @@ if __name__ == "__main__":
 
     best_dmap_itr = (0, init_itr)
     for itr in range(init_itr, args.max_iter):
-        # train(itr, dataset, args, model, optimizer, logger, device,
-        #       valid=args.valid, scheduler=None)
         train(
             itr, dataset, args, model, optimizer, logger, device,
             scheduler=lr_scheduler
         )
-        if itr % 200 == 0 and not itr == 0:
+        if itr % 100 == 0 and not itr == 0:
             if type(model) == torch.nn.DataParallel:
                 model_state = model.module.state_dict()
             else:
@@ -84,11 +82,9 @@ if __name__ == "__main__":
                     "model_state_dict": model_state
                     # 'optimizer_state_dict': optimizer.state_dict()
                 },
-                "./ckpt/" + args.model_name + ".pkl",
+                "./ckpt/thumos/" + args.model_name + ".pkl",
             )
         if itr % 50 == 0 and not itr == 0:
-            # test(itr, dataset, args, model, logger,
-            #      device, is_detect=True, is_score=False)
             dmap = test(itr, dataset, args, model, logger, device)
             if dmap > best_dmap_itr[0]:
                 best_dmap_itr = (dmap, itr)

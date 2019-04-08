@@ -158,6 +158,9 @@ class Model_detect(nn.Module):
 
         x_class = self.classifier(x)
 
+        x = x.squeeze(0)
+        x_class = x_class.squeeze(0)
+
         return x, x_class
 
 

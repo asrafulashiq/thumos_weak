@@ -27,13 +27,13 @@ parser.add_argument(
 )
 parser.add_argument(
     "--max-seqlen",
-    default=300,
+    default=700,
     type=int,
     help="maximum sequence length during training (default: 750)",
 )
 parser.add_argument(
     "--Lambda",
-    default=0.5,
+    default=1,
     type=float,
     help="weight on Co-Activity Loss (default: 0.5)",
 )
@@ -69,4 +69,4 @@ parser.add_argument(
 
 parser.add_argument("--beta1", type=float, default=1)
 parser.add_argument("--beta2", type=float, default=1)
-
+parser.add_argument("--thres", type=float, default=0.4)

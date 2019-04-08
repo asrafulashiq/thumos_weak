@@ -307,13 +307,9 @@ def continuity_loss(element_logits, labels, seq_len, batch_size, device):
 
     logit_masked = element_logits * labels_var.unsqueeze(1)  # B, n_el, n_cls
     logit_masked = logit_masked.to(device)
-    logit_diff = torch.sum(
+    logit_s = torch.sum(
         torch.abs((logit_masked[:, 1:, :] - logit_masked[:, :-1, :])), 1
-    )  # B, n_cls
-
-    # labels_sum = torch.sum(labels_var, -1, keepdim=True) + 1e-8  # B, 1
-
-    logit_s = logit_diff  # / labels_sum  # B, n_cls
+    )
     logit_s = logit_s / torch.from_numpy(seq_len.astype(np.float32)).unsqueeze(-1).to(
         device
     )

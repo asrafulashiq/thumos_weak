@@ -22,11 +22,11 @@ def idx2multihot(id_list, num_class):
 
 
 def random_extract(feat, t_max):
-    ind = np.random.choice(feat.shape[0], size=t_max)
-    ind = sorted(ind)
-    return feat[ind]
-    # r = np.random.randint(len(feat) - t_max)
-    # return feat[r: r + t_max]
+    # ind = np.random.choice(feat.shape[0], size=t_max)
+    # ind = sorted(ind)
+    # return feat[ind]
+    r = np.random.randint(len(feat) - t_max)
+    return feat[r: r + t_max]
 
 
 def pad(feat, min_len):

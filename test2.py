@@ -56,7 +56,7 @@ def test(itr, dataset, args, model, logger, device):
     instance_logits_stack = np.array(instance_logits_stack)
     labels_stack = np.array(labels_stack)
 
-    dmap, iou = dmAP(element_logits_stack, dataset.path_to_annotations)
+    dmap, iou = dmAP(element_logits_stack, dataset.path_to_annotations, args)
 
     if args.dataset_name == "Thumos14":
         test_set = sio.loadmat("test_set_meta.mat")["test_videos"][0]
@@ -66,11 +66,8 @@ def test(itr, dataset, args, model, logger, device):
 
     cmap = cmAP(instance_logits_stack, labels_stack)
     print("Classification map %f" % cmap)
-    print("Detection map @ %f = %f" % (iou[0], dmap[0]))
-    # print('Detection map @ %f = %f' %(iou[1], dmap[1]))
-    # print('Detection map @ %f = %f' %(iou[2], dmap[2]))
-    # print('Detection map @ %f = %f' %(iou[3], dmap[3]))
-    # print('Detection map @ %f = %f' %(iou[4], dmap[4]))
+    for k in range(len(iou)):
+        print("Detection map @ %f = %f" % (iou[k], dmap[k]))
 
     logger.log_value("Test Classification mAP", cmap, itr)
     for item in list(zip(dmap, iou)):

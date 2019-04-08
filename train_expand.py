@@ -27,8 +27,12 @@ def MILL_all(element_logits, seq_len, labels, device):
         lab = Variable(labels[i])
         loss1 = -torch.sum(lab * torch.log(topk+eps)) / torch.sum(lab)
         loss2 = -torch.sum((1-lab) * torch.log(1-topk+eps)) / torch.sum(1-lab)
-
         loss += 1/2 * (loss1 + loss2)
+
+        # loss = -torch.sum(
+        #     lab * torch.log(topk+eps) +
+        #     (1-lab) * torch.log(1-topk+eps)
+        #     ) / 20
 
         if torch.isnan(loss):
             import pdb
@@ -73,7 +77,6 @@ def WLOSS_orig(x, element_logits, weight, labels,
                seq_len, device, args, gt_all=None):
 
     sim_loss = 0.0
-    sig = args.dis
     labels = Variable(labels)
 
     if gt_all is not None:
@@ -108,12 +111,15 @@ def WLOSS_orig(x, element_logits, weight, labels,
         Xl = get_unit_vector(Xl)
 
         D1 = get_per_dis(Xh, Xh, weight[[common_ind], :])
+        # D1 = torch.triu(D1)
+        # d1 = torch.sum(D1) / (args.similar_size*(args.similar_size+1)/2)
+
         D1 = D1.reshape(args.similar_size**2)
+        d1 = list_max_like(D1, beta=args.beta1)
 
         D2 = get_per_dis(Xh, Xl, weight[[common_ind], :])
         D2 = D2.reshape(args.similar_size**2)
 
-        d1 = list_max_like(D1, beta=args.beta1)
         d2 = list_min_like(D2, beta=args.beta1)
 
         # check with gt
@@ -133,7 +139,7 @@ def WLOSS_orig(x, element_logits, weight, labels,
                                beta=args.beta2)
             sim_loss_gt += loss_gt
 
-        loss = max_like(d1-d2+sig, torch.FloatTensor([0.0]).to(device),
+        loss = max_like(d1-d2+args.dis, torch.FloatTensor([0.0]).to(device),
                         beta=args.beta2)
 
         sim_loss += loss
@@ -171,11 +177,11 @@ def train(itr, dataset, args, model, optimizer,
     # casloss = WLOSS_orig(final_features, element_logits, weight,
     #                      labels, args.num_similar,
     #                      seq_len, device, args)
-    casloss, casloss2 = WLOSS_orig(final_features, element_logits, weight,
+    casloss = WLOSS_orig(final_features, element_logits, weight,
                                    labels, seq_len, device, args, None)
 
     # total_loss = args.Lambda * milloss + (1 - args.Lambda) * (casloss)
-    total_loss = args.Lambda * milloss + (1 - args.Lambda) * casloss
+    total_loss = milloss + args.Lambda * casloss
                 #  + 0.3 * casloss2
 
     if torch.isnan(total_loss):
