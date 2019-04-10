@@ -146,22 +146,27 @@ def WLOSS_orig(x, element_logits, weight, labels, seq_len, device, args, gt_all=
         Xl = get_unit_vector(Xl, dim=0)
 
         D1 = batch_per_dis(Xh, Xh, weight[common_ind, :])
-        # D1 = torch.triu(D1)
-        # d1 = torch.sum(D1) / (args.similar_size*(args.similar_size+1)/2)
+
+        D1 = torch.triu(D1, diagonal=1)
+        D1 = D1.view(D1.shape[0], -1)
+        d1 = torch.sum(D1, -1) / (args.similar_size*(args.similar_size-1)/2)
 
         # D1 = D1.reshape(args.similar_size**2)
         # d1 = list_max_like(D1, beta=args.beta1)
 
         D2 = batch_per_dis(Xh, Xl, weight[common_ind, :])
-        # D2 = D2.reshape(args.similar_size**2)
 
+        D2 = D2 * (1-torch.eye(D2.shape[1])).unsqueeze(0)
+        D2 = D2.view(D2.shape[0], -1)
+
+        d2 = torch.sum(D2, -1) / (args.similar_size*(args.similar_size-1))
         # d2 = list_min_like(D2, beta=args.beta1)
 
-        d1 = D1[:, 0, 1]
-        d2 = D2[:, 0, 1]
-        d3 = D2[:, 1, 0]
+        # d1 = D1[:, 0, 1]
+        # d2 = D2[:, 0, 1]
+        # d3 = D2[:, 1, 0]
 
-        d2 = (d2 + d3) / 2
+        # d2 = (d2 + d3) / 2
 
         # check with gt
         if gt_all is not None:
