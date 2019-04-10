@@ -50,7 +50,7 @@ parser.add_argument("--seed", type=int, default=1,
 parser.add_argument(
     "--max-iter",
     type=int,
-    default=15000,
+    default=10001,
     help="maximum iteration to train (default: 50000)",
 )
 
@@ -62,7 +62,7 @@ parser.add_argument("--similar-size", type=int, default=4,
                     help="how many instances of similar type will be there")
 parser.add_argument(
     "--num-similar",
-    default=4,
+    default=5,
     type=int,
     help="number of similar pairs in a batch of data  (default: 3)",
 )
