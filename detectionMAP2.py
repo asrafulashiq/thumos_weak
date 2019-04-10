@@ -17,12 +17,12 @@ def str2ind(categoryname, classlist):
 
 
 def smooth(v, order=2):
-    # return v
-    l = min(5, len(v))
-    l = l - (1 - l % 2)
-    if len(v) <= order:
-        return v
-    return savgol_filter(v, l, order)
+    return v
+    # l = min(5, len(v))
+    # l = l - (1 - l % 2)
+    # if len(v) <= order:
+    #     return v
+    # return savgol_filter(v, l, order)
 
 
 def filter_segments(segment_predict, videonames, ambilist):
@@ -48,11 +48,11 @@ def filter_segments(segment_predict, videonames, ambilist):
     return np.array(s)
 
 
-def getLocMAP(predictions, th, annotation_path, args):
+def getLocMAP(predictions, th, annotation_path, args=None):
 
     gtsegments = np.load(annotation_path + "/segments.npy")
     gtlabels = np.load(annotation_path + "/labels.npy")
-    # gtlabels = np.load(annotation_path + '/labels.npy')
+    gtlabels = np.load(annotation_path + "/labels.npy")
     videoname = np.load(annotation_path + "/videoname.npy")
     videoname = np.array([v.decode("utf-8") for v in videoname])
     subset = np.load(annotation_path + "/subset.npy")
@@ -107,8 +107,7 @@ def getLocMAP(predictions, th, annotation_path, args):
     for t in templabelcategories:
         templabelidx.append(str2ind(t, classlist))
 
-    # process the predictions such that classes having greater than a
-    # certain threshold are detected only
+    # process the predictions such that classes having greater than a certain threshold are detected only
     predictions_mod = []
     c_score = []
     for p in predictions:
@@ -116,8 +115,9 @@ def getLocMAP(predictions, th, annotation_path, args):
         [pp[:, i].sort() for i in range(np.shape(pp)[1])]
         pp = -pp
         c_s = np.mean(pp[: int(np.shape(pp)[0] / 8), :], axis=0)
-        ind = c_s > 0.
+        ind = c_s > 0.0
         c_score.append(c_s)
+        new_pred = np.zeros((np.shape(p)[0], np.shape(p)[1]), dtype="float32")
         predictions_mod.append(p * ind)
     predictions = predictions_mod
 
@@ -132,15 +132,11 @@ def getLocMAP(predictions, th, annotation_path, args):
         # Get list of all predictions for class c
         for i in range(len(predictions)):
             tmp = smooth(predictions[i][:, c])
-            if np.isnan(tmp).any():
-                import pdb; pdb.set_trace()
-            # tmp = sigmoid(tmp)
-            # tmp[tmp < -10] = -10
-            # tmp[tmp > 5] = 5
-            # tmp = (tmp - np.min(tmp))/(np.max(tmp)-np.min(tmp)+1e-10)
-            threshold = np.max(tmp) - (np.max(tmp) - np.min(tmp)) * (1-args.thres)
-            # threshold = -2
-            # threshold = 0.4
+            if args is None:
+                thres = 0.5
+            else:
+                thres = 1 - args.thres
+            threshold = np.max(tmp) - (np.max(tmp) - np.min(tmp)) * thres
             vid_pred = np.concatenate(
                 [np.zeros(1), (tmp > threshold).astype("float32"), np.zeros(1)], axis=0
             )
@@ -151,9 +147,9 @@ def getLocMAP(predictions, th, annotation_path, args):
             e = [idk for idk, item in enumerate(vid_pred_diff) if item == -1]
             for j in range(len(s)):
                 aggr_score = np.max(tmp[s[j] : e[j]]) + 0.7 * c_score[i][c]
-                if e[j] - s[j] >= 0:
+                if e[j] - s[j] >= 2:
                     segment_predict.append(
-                        [i, s[j], e[j], np.max(tmp[s[j]: e[j]]) + 0. * c_score[i][c]]
+                        [i, s[j], e[j], np.max(tmp[s[j] : e[j]]) + 0.7 * c_score[i][c]]
                     )
                     detection_results[i].append(
                         [
@@ -211,11 +207,11 @@ def getLocMAP(predictions, th, annotation_path, args):
     return 100 * np.mean(ap)
 
 
-def getDetectionMAP(predictions, annotation_path, args):
-    if args.test:
+def getDetectionMAP(predictions, annotation_path, args=None):
+    if args is not None and args.test:
         iou_list = [0.1, 0.3, 0.5]
     else:
-        iou_list = [0.3, 0.5]
+        iou_list = [0.1]
     dmap_list = []
     for iou in iou_list:
         print("Testing for IoU %f" % iou)

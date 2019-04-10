@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as torch_init
+from torch.nn.utils import weight_norm
 
 from tcn import TemporalConvNet as tcn
 
@@ -39,11 +40,12 @@ class Model(torch.nn.Module):
     def __init__(self, n_feature, n_class):
         super(Model, self).__init__()
 
-        self.init_fc = nn.Linear(n_feature, n_feature)
-        self.init_drop = nn.Dropout(0.6)
+        # self.init_fc = nn.Linear(n_feature, n_feature)
+        # self.init_drop = nn.Dropout(0.6)
 
         self.fc = nn.Linear(n_feature, n_feature)
         # self.fc1 = nn.Linear(n_feature, n_feature)
+
         self.classifier = nn.Linear(n_feature, n_class, bias=True)
         self.dropout = nn.Dropout(0.7)
 
@@ -51,9 +53,9 @@ class Model(torch.nn.Module):
 
     def forward(self, inputs, is_training=True, is_tmp=False):
 
-        inputs = F.relu(self.init_fc(inputs))
-        if is_training:
-            inputs = self.init_drop(inputs)
+        # inputs = F.relu(self.init_fc(inputs))
+        # if is_training:
+        #     inputs = self.init_drop(inputs)
         x = F.relu(self.fc(inputs))
         if is_training:
             x = self.dropout(x)

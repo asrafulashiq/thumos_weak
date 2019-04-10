@@ -1,26 +1,17 @@
 from __future__ import print_function
-# import argparse
 import os
 import torch
 import torch.optim as optim
 
-# from model import Model_detect as Model
-# from video_dataset import Dataset
-# from test_detect import test
-# from train_detect import train
+from model import Model as Model
 import options_expand as options
 
-from model import Model
-# from video_dataset2 import Dataset
+# from model import Model
 from test2 import test
-# from train_new import train
-# import options
 
 from train_expand import train
 from dataset import Dataset
-
 from tensorboard_logger import Logger
-# from tqdm import tqdm
 
 torch.set_default_tensor_type("torch.cuda.FloatTensor")
 
@@ -69,7 +60,7 @@ if __name__ == "__main__":
     for itr in range(init_itr, args.max_iter):
         train(
             itr, dataset, args, model, optimizer, logger, device,
-            scheduler=lr_scheduler
+            scheduler=None
         )
         if itr % 100 == 0 and not itr == 0:
             if type(model) == torch.nn.DataParallel:
@@ -84,11 +75,13 @@ if __name__ == "__main__":
                 },
                 "./ckpt/thumos/" + args.model_name + ".pkl",
             )
-        if itr % 50 == 0 and not itr == 0:
+        if itr % 100 == 0 and not itr == 0:
+            if itr % 500 == 0 and not itr == 0:
+                args.test = True
             dmap = test(itr, dataset, args, model, logger, device)
-            if dmap > best_dmap_itr[0]:
-                best_dmap_itr = (dmap, itr)
 
-    print()
-    print(
-     f"Best Detection mAP : {best_dmap_itr[0]:.3f} @iter {best_dmap_itr[1]}")
+            args.test = False
+
+    # print()
+    # print(
+    #  f"Best Detection mAP : {best_dmap_itr[0]:.3f} @iter {best_dmap_itr[1]}")

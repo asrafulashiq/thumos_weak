@@ -1,1 +1,0 @@
-/home/ash/anaconda3/envs/ucf-ano/bin/python

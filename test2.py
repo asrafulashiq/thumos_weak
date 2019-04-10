@@ -1,9 +1,5 @@
 import torch
 import torch.nn.functional as F
-import torch.optim as optim
-from model import Model
-from video_dataset import Dataset
-from tensorboard_logger import log_value
 import utils
 import numpy as np
 from torch.autograd import Variable
@@ -21,7 +17,6 @@ def test(itr, dataset, args, model, logger, device):
     instance_logits_stack = []
     element_logits_stack = []
     labels_stack = []
-    model.train(False)
     while not done:
         if dataset.currenttestidx % 100 == 0:
             print(
@@ -33,20 +28,22 @@ def test(itr, dataset, args, model, logger, device):
         features = torch.from_numpy(features).float().to(device)
 
         with torch.no_grad():
+            features = features.unsqueeze(0)
             _, element_logits = model(Variable(features), is_training=False)
-        element_logits = element_logits.squeeze(0)
-
-        topk, _ = torch.topk(element_logits,
-                             k=int(features.shape[0]/8), dim=0)
-
+            element_logits = element_logits.squeeze(0)
         tmp = (
-            torch.sigmoid(
-                torch.mean(topk, dim=0),
+            F.softmax(
+                torch.mean(
+                    torch.topk(
+                        element_logits, k=int(np.ceil(len(features) / 8)), dim=0
+                    )[0],
+                    dim=0,
+                ),
+                dim=0,
             )
             .cpu()
             .data.numpy()
         )
-        # element_logits = torch.sigmoid(element_logits)
         element_logits = element_logits.cpu().data.numpy()
 
         instance_logits_stack.append(tmp)
@@ -71,9 +68,6 @@ def test(itr, dataset, args, model, logger, device):
 
     logger.log_value("Test Classification mAP", cmap, itr)
     for item in list(zip(dmap, iou)):
-        logger.log_value("Test Detection mAP @ IoU = " +
-                         str(item[1]), item[0], itr)
+        logger.log_value("Test Detection mAP @ IoU = " + str(item[1]), item[0], itr)
 
-    utils.write_to_file(args.dataset_name, dmap, cmap, itr)
-
-    return dmap[0]
+    # utils.write_to_file(args.dataset_name, dmap, cmap, itr)
