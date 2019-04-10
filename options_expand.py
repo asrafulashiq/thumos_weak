@@ -2,12 +2,12 @@ import argparse
 
 parser = argparse.ArgumentParser(description="WTALC")
 parser.add_argument(
-    "--lr", type=float, default=0.0001, help="learning rate (default: 0.0001)"
+    "--lr", type=float, default=0.0002, help="learning rate (default: 0.0001)"
 )
 parser.add_argument(
     "--batch-size",
     type=int,
-    default=10,
+    default=20,
     help="number of instances in a batch of data (default: 10)",
 )
 parser.add_argument("--model-name", "-m", default="weakloc",
@@ -58,11 +58,11 @@ parser.add_argument("--dis", type=float, default=3, help="distance thres")
 
 parser.add_argument("--test", action='store_true')
 
-parser.add_argument("--similar-size", type=int, default=2,
+parser.add_argument("--similar-size", type=int, default=4,
                     help="how many instances of similar type will be there")
 parser.add_argument(
     "--num-similar",
-    default=3,
+    default=4,
     type=int,
     help="number of similar pairs in a batch of data  (default: 3)",
 )

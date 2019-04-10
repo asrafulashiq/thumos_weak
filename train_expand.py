@@ -71,13 +71,13 @@ def min_like(a, b, beta=10):
 
 
 def list_max_like(x, beta=100):
-    # return 1/beta * torch.logsumexp(beta*x, -1)
-    return torch.max(x, dim=-1)[0]
+    return 1/beta * torch.logsumexp(beta*x, -1)
+    #return torch.max(x, dim=-1)[0]
 
 
 def list_min_like(x, beta=100):
-    # return -list_max_like(-x, beta=beta)
-    return torch.min(x, dim=-1)[0]
+    return -list_max_like(-x, beta=beta)
+    #return torch.min(x, dim=-1)[0]
 
 
 def get_per_dis(x1, x2, w):
@@ -137,7 +137,7 @@ def WLOSS_orig(x, element_logits, weight, labels, seq_len, device, args, gt_all=
             # )
             xh = torch.mm(torch.transpose(x[k][: seq_len[k]], 1, 0), atn)
             xl = torch.mm(torch.transpose(x[k][: seq_len[k]], 1, 0), atn_l)
-            xh  =xh.unsqueeze(1)
+            xh = xh.unsqueeze(1)
             xl = xl.unsqueeze(1)
             Xh = torch.cat([Xh, xh], dim=1)
             Xl = torch.cat([Xl, xl], dim=1)
@@ -150,17 +150,17 @@ def WLOSS_orig(x, element_logits, weight, labels, seq_len, device, args, gt_all=
         D1 = torch.triu(D1, diagonal=1)
         D1 = D1.view(D1.shape[0], -1)
         d1 = torch.sum(D1, -1) / (args.similar_size*(args.similar_size-1)/2)
-
+        #d1 = torch.max(D1, -1)[0]
         # D1 = D1.reshape(args.similar_size**2)
         # d1 = list_max_like(D1, beta=args.beta1)
 
         D2 = batch_per_dis(Xh, Xl, weight[common_ind, :])
 
-        D2 = D2 * (1-torch.eye(D2.shape[1])).unsqueeze(0)
+        #D2 = D2 * (1-torch.eye(D2.shape[1])).unsqueeze(0)
         D2 = D2.view(D2.shape[0], -1)
 
-        d2 = torch.sum(D2, -1) / (args.similar_size*(args.similar_size-1))
-        # d2 = list_min_like(D2, beta=args.beta1)
+        # d2 = torch.sum(D2, -1) / (args.similar_size*(args.similar_size-1))
+        d2 = list_min_like(D2, beta=args.beta1)
 
         # d1 = D1[:, 0, 1]
         # d2 = D2[:, 0, 1]
