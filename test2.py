@@ -8,6 +8,8 @@ from detectionMAP2 import getDetectionMAP as dmAP
 import scipy.io as sio
 from sklearn.metrics import accuracy_score
 
+from eval_detection import ANETdetection
+
 torch.set_default_tensor_type("torch.cuda.FloatTensor")
 
 
@@ -53,7 +55,13 @@ def test(itr, dataset, args, model, logger, device):
     instance_logits_stack = np.array(instance_logits_stack)
     labels_stack = np.array(labels_stack)
 
-    dmap, iou = dmAP(element_logits_stack, dataset.path_to_annotations, args)
+    # dmap, iou = dmAP(element_logits_stack, dataset.path_to_annotations, args)
+
+    iou = [0.1, 0.3, 0.5]
+
+    dmap_detect = ANETdetection(dataset.path_to_annotations, iou)
+    dmap_detect._import_prediction(element_logits_stack)
+    dmap = dmap_detect.evaluate()
 
     if args.dataset_name == "Thumos14":
         test_set = sio.loadmat("test_set_meta.mat")["test_videos"][0]
