@@ -72,7 +72,7 @@ def test(itr, dataset, args, model, logger, device):
     cmap = cmAP(instance_logits_stack, labels_stack)
     print("Classification map %f" % cmap)
     for k in range(len(iou)):
-        print("Detection map @ %f = %f" % (iou[k], dmap[k]))
+        print("Detection map @ %f = %f" % (iou[k], dmap[k]*100))
 
     logger.log_value("Test Classification mAP", cmap, itr)
     for item in list(zip(dmap, iou)):
