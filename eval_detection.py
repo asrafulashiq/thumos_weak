@@ -176,7 +176,7 @@ class ANETdetection(object):
             [pp[:, i].sort() for i in range(np.shape(pp)[1])]
             pp = -pp
             c_s = np.mean(pp[: int(np.shape(pp)[0] / 8), :], axis=0)
-            ind = c_s > 0.0
+            ind = c_s > -50
             c_score.append(c_s)
             predictions_mod.append(p * ind)
 
