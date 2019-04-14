@@ -127,14 +127,14 @@ def WLOSS_orig(x, element_logits, weight, labels, seq_len, device, args, gt_all=
         Xl = torch.Tensor()
 
         for k in range(i, i + args.similar_size):
-            atn = F.softmax(element_logits[k][: seq_len[k], common_ind], dim=0)
+            elem = element_logits[k][: seq_len[k], common_ind]
+            # elem = torch.clamp(elem, min=-5)
+            atn = F.softmax(elem, dim=0)
 
             n1 = torch.FloatTensor([np.maximum(seq_len[k] - 1, 1)]).to(device)
             atn_l = (1 - atn) / n1
 
-            #atn_l = F.softmin(
-            #    element_logits[k][:seq_len[k], common_ind], dim=0
-            #)
+            # atn_l = F.softmin(elem, dim=0)
 
             #_atn = F.sigmoid(element_logits[k][:seq_len[k], common_ind])
             #atn = _atn / torch.sum(_atn, 0, keepdim=True)
@@ -267,6 +267,24 @@ def CASL(x, element_logits, weight, labels, seq_len, device, args, gt_all=None):
     return sim_loss
 
 
+def continuity_loss(element_logits, labels, seq_len, device):
+    """ element_logits should be torch tensor of dimension (B, n_element, n_class),
+    return is a torch tensor of dimension (B, n_class) """
+
+    labels_var = Variable(labels)
+
+    logit_masked = element_logits * labels_var.unsqueeze(1)  # B, n_el, n_cls
+    logit_masked = logit_masked.to(device)
+    logit_s = torch.sum(
+        torch.abs((logit_masked[:, 1:, :] - logit_masked[:, :-1, :])), 1
+    )
+    logit_s = logit_s / torch.from_numpy(seq_len.astype(np.float32)).unsqueeze(-1).to(
+        device
+    )
+    c_loss = torch.sum(logit_s) / element_logits.shape[0]
+    return c_loss
+
+
 def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
 
     # #### gt #####
@@ -294,6 +312,8 @@ def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
     # casloss = CASL(
     #     final_features, element_logits, weight, labels, seq_len, device, args, None
     # )
+
+    # closs = continuity_loss(element_logits, labels, seq_len, device)
 
     total_loss = args.Lambda * milloss + (1 - args.Lambda) * casloss
 

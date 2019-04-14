@@ -128,13 +128,18 @@ if __name__ == "__main__":
             # logit[logit > 2] = 2
             logit = smooth(logit)
 
+            def softmax(x):
+                x = x - np.max(x)
+                return np.exp(x)/np.sum(np.exp(x))
             def softmin(x):
                 x = x - np.min(x)
                 return np.exp(-x)/np.sum(np.exp(-x))
-            #logit = softmax(logit)
+
             #logit = (1-sigmoid(logit))/np.sum(1-sigmoid(logit))
-            #logit = (1-logit) / (logit.shape[0]-1)
-            #logit = softmin(logit)
+            logit = np.clip(logit, a_min=-5, a_max=None)
+            logit = softmin(logit)
+            # logit = softmax(logit)
+            # logit = (1-logit) / (logit.shape[0]-1)
 
             logit = (logit - np.min(logit))/(np.max(logit)-np.min(logit)+1e-10)
             # logit_orig = logit
@@ -171,3 +176,4 @@ if __name__ == "__main__":
             fig.tight_layout()
             pdf.savefig(fig)
     plt.close('all')
+    print(f"saved to {out_name}")

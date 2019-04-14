@@ -191,6 +191,7 @@ class ANETdetection(object):
                     thres = 0.5
                 else:
                     thres = 1 - args.thres
+                tmp = np.clip(tmp, a_min=-5, a_max=5)
                 threshold = np.max(tmp) - (np.max(tmp) - np.min(tmp)) * thres
                 vid_pred = np.concatenate(
                     [np.zeros(1), (tmp > threshold).astype("float32"), np.zeros(1)], axis=0
