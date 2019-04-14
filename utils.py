@@ -45,12 +45,16 @@ def fn_normalize(x):
     return (x - np.mean(x, 0, keepdims=True)) / \
             (np.std(x, 0, keepdims=True)+1e-10)
 
-
-def process_feat(feat, length, normalize=False):
-    if len(feat) > length:
-        x = random_extract(feat, length)
+def process_feat(feat, length=None, normalize=False):
+    if length is not None:
+        if len(feat) > length:
+            x = random_extract(feat, length)
+        else:
+            x = pad(feat, length)
     else:
-        x = pad(feat, length)
+        x = feat
+    if normalize:
+        x = fn_normalize(x)
     return x
 
 

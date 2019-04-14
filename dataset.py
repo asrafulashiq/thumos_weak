@@ -158,6 +158,7 @@ class Dataset:
         else:
             labs = self.labels_multihot[self.testidx[self.currenttestidx]]
             feat = self.features[self.testidx[self.currenttestidx]]
+            feat = utils.process_feat(feat, normalize=self.normalize)
 
             if self.currenttestidx == len(self.testidx) - 1:
                 done = True
