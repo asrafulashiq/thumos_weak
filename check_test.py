@@ -1,6 +1,6 @@
 import torch
 from model import Model
-from video_dataset import Dataset
+from dataset import Dataset
 import utils
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,6 +12,7 @@ import torch.nn.functional as F
 from tqdm import tqdm
 import scipy.io as sio
 from scipy.signal import savgol_filter
+from matplotlib.backends.backend_pdf import PdfPages
 
 
 torch.set_default_tensor_type('torch.cuda.FloatTensor')
@@ -26,18 +27,22 @@ if IS_ORIGINAL:
 
 else:
     # from model import Model_detect as Model
-    import options as options
+    import options_expand as options
 
-    out_name = "./fig/test_figures_detect.pdf"
+    out_name = "./fig/test_figures_thumos3.pdf"
 
 
-def smooth(v, order=2):
+def smooth(v, order=1):
     return v
-    # l = min(order + 1, len(v))
-    # l = l - (1 - l % 2)
-    # if len(v) <= order:
-    #     return v
-    # return savgol_filter(v, l, order)
+    l = min(50, len(v))
+    l = l - (1 - l % 2)
+    if len(v) <= order:
+        return v
+    return savgol_filter(v, l, order)
+
+
+def sigmoid(x):
+    return 1/(1+np.exp(-x)+1e-10)
 
 
 def test(features, model, device):
@@ -45,7 +50,7 @@ def test(features, model, device):
     features = torch.from_numpy(features).float().to(device)
     with torch.no_grad():
         if IS_ORIGINAL:
-            _, x_class, atn = model(Variable(features), is_training=False)
+            _, x_class = model(Variable(features), is_training=False)
         else:
             # features = features.unsqueeze(0)
             _, x_class = model(Variable(features), is_training=False)
@@ -67,7 +72,7 @@ def get_pred_loc(x, threshold=0.1):
     s = [idk for idk, item in enumerate(vid_pred_diff) if item == 1]
     e = [idk for idk, item in enumerate(vid_pred_diff) if item == -1]
     for j in range(len(s)):
-        if e[j] - s[j] >= 0:
+        if e[j] - s[j] >= 2:
             pred_loc.append((s[j], e[j]))
     return pred_loc
 
@@ -93,15 +98,19 @@ if __name__ == "__main__":
     model.eval()
 
     total_images = len(dataset.testidx)
-    im_per_row = 4
-    total_row = int(np.ceil(total_images / im_per_row))
-    fig, _ = plt.subplots(total_row, im_per_row)
-    _mul = total_images / 16.
-    fig.set_size_inches(_mul * 2, _mul * 6)
-    axes = fig.axes
+    im_per_row = 3
+    row_per_page = 5
+    total_pages = int(np.ceil(total_images/(im_per_row*row_per_page)))
+
+    figs = []
+    axes = []
+    for i in range(total_pages):
+        f, a = plt.subplots(row_per_page, im_per_row)
+        f.set_size_inches(10, 12)
+        figs.append(f)
+        axes.extend(a.flatten())
 
     palette = sns.color_palette(None, len(dataset.classlist))
-    # palette = np.array(palette)
 
     cnt_ax = 0
     for feat, labs, seg in tqdm(dataset.load_one_test_with_segment()):
@@ -117,10 +126,21 @@ if __name__ == "__main__":
             logit = element_logits[:, cls_idx]
             # logit[logit < 0] = 0
             # logit[logit > 2] = 2
-            logit = (logit - np.min(logit))/(np.max(logit)-np.min(logit)+1e-10)
             logit = smooth(logit)
 
-            pred_loc = get_pred_loc(logit, threshold=0.4)
+            def softmin(x):
+                x = x - np.min(x)
+                return np.exp(-x)/np.sum(np.exp(-x))
+            #logit = softmax(logit)
+            #logit = (1-sigmoid(logit))/np.sum(1-sigmoid(logit))
+            #logit = (1-logit) / (logit.shape[0]-1)
+            #logit = softmin(logit)
+
+            logit = (logit - np.min(logit))/(np.max(logit)-np.min(logit)+1e-10)
+            # logit_orig = logit
+            # logit = sigmoid(logit)
+
+            pred_loc = get_pred_loc(logit, threshold=0.5)
             pred = np.zeros(len(feat))
 
             for _loc in pred_loc:
@@ -135,14 +155,19 @@ if __name__ == "__main__":
                 e = int(round(_seg[1]*25/16))
                 gt[s:e+1] = 1
 
+            # ax.plot(logit_orig, color=palette[cls_idx], linewidth=1, alpha=0.1)
+            ax.plot(pred, color=palette[cls_idx],
+                    linestyle='-.', linewidth=1, alpha=0.4)
+            ax.plot(logit, color=palette[cls_idx], linewidth=2)
             ax.plot(gt, color=palette[cls_idx], linestyle='-',
                     linewidth=2, alpha=0.4)
-            ax.plot(pred, color=palette[cls_idx], linestyle='-.', linewidth=2, alpha=0.4)
-            ax.plot(logit, color=palette[cls_idx], linewidth=2)
         # ax.plot(atn, color=(0, 0, 0), alpha=0.6)
         ax.grid(True)
         ax.set_yticks([0, 0.2, 0.4, 0.5, 0.6, 0.8])
         ax.set_title(",".join([ii[:4] for ii in np.unique(labs)]))
         ax.set_ylim(-0.05, 1.1)
-    fig.tight_layout()
-    fig.savefig(out_name)
+    with PdfPages(out_name) as pdf:
+        for fig in figs:
+            fig.tight_layout()
+            pdf.savefig(fig)
+    plt.close('all')

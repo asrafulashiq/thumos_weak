@@ -182,3 +182,10 @@ class Dataset:
         )
         labels = np.array([self.labels_multihot[i] for i in indices])
         return data, labels
+
+    def load_one_test_with_segment(self):
+        for idx in self.testidx:
+            feat = self.features[idx]
+            labs = self._labels[idx]
+            seg = self.segments[idx]
+            yield np.array(feat), np.array(labs), np.array(seg)
