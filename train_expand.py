@@ -132,9 +132,15 @@ def WLOSS_orig(x, element_logits, weight, labels, seq_len, device, args, gt_all=
             n1 = torch.FloatTensor([np.maximum(seq_len[k] - 1, 1)]).to(device)
             atn_l = (1 - atn) / n1
 
-            # atn_l = F.softmin(
-            #     element_logits[k][:seq_len[k], [common_ind]], dim=0
-            # )
+            #atn_l = F.softmin(
+            #    element_logits[k][:seq_len[k], common_ind], dim=0
+            #)
+
+            #_atn = F.sigmoid(element_logits[k][:seq_len[k], common_ind])
+            #atn = _atn / torch.sum(_atn, 0, keepdim=True)
+
+            #atn_l = (1 - _atn) / torch.sum(1-_atn, 0, keepdim=True)
+
             xh = torch.mm(torch.transpose(x[k][: seq_len[k]], 1, 0), atn)
             xl = torch.mm(torch.transpose(x[k][: seq_len[k]], 1, 0), atn_l)
             xh = xh.unsqueeze(1)
@@ -306,7 +312,7 @@ def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
 
     optimizer.zero_grad()
     total_loss.backward()
-    torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
+    # torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
     optimizer.step()
 
     if scheduler:
