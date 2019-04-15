@@ -135,15 +135,7 @@ if __name__ == "__main__":
                 x = x - np.min(x)
                 return np.exp(-x)/np.sum(np.exp(-x))
 
-            #logit = (1-sigmoid(logit))/np.sum(1-sigmoid(logit))
-            logit = np.clip(logit, a_min=-5, a_max=None)
-            logit = softmin(logit)
-            # logit = softmax(logit)
-            # logit = (1-logit) / (logit.shape[0]-1)
-
             logit = (logit - np.min(logit))/(np.max(logit)-np.min(logit)+1e-10)
-            # logit_orig = logit
-            # logit = sigmoid(logit)
 
             pred_loc = get_pred_loc(logit, threshold=0.5)
             pred = np.zeros(len(feat))
