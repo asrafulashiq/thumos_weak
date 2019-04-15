@@ -13,6 +13,7 @@ from train_expand import train
 from dataset import Dataset
 from tensorboard_logger import Logger
 
+
 torch.set_default_tensor_type("torch.cuda.FloatTensor")
 
 if __name__ == "__main__":

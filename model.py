@@ -71,13 +71,15 @@ class FilterBlock(torch.nn.Module):
         x = self.pad(x)
         x = F.conv1d(x, self.filter, stride=self.stride,
                      groups=self.in_channel)
-        x = x.squeeze(0)
         x = x.transpose(1, 2)
+        x = x.squeeze(0)
         return x
 
 class Model(torch.nn.Module):
     def __init__(self, n_feature, n_class):
         super(Model, self).__init__()
+
+        self.filter_block = FilterBlock(n_feature, size=5)
 
         # self.init_fc = nn.Linear(n_feature, n_feature)
         # self.init_drop = nn.Dropout(0.6)
@@ -92,6 +94,7 @@ class Model(torch.nn.Module):
         # inputs = F.relu(self.init_fc(inputs))
         # if is_training:
         #     inputs = self.init_drop(inputs)
+        inputs = self.filter_block(inputs)
         x = F.relu(self.fc(inputs))
         if is_training:
             x = self.dropout(x)

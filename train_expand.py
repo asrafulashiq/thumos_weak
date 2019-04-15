@@ -131,10 +131,10 @@ def WLOSS_orig(x, element_logits, weight, labels, seq_len, device, args, gt_all=
             # elem = torch.clamp(elem, max=2)
             atn = F.softmax(elem, dim=0)
 
-            n1 = torch.FloatTensor([np.maximum(seq_len[k] - 1, 1)]).to(device)
-            atn_l = (1 - atn) / n1
+            # n1 = torch.FloatTensor([np.maximum(seq_len[k] - 1, 1)]).to(device)
+            # atn_l = (1 - atn) / n1
 
-            # atn_l = F.softmin(elem, dim=0)
+            atn_l = F.softmin(elem, dim=0)
 
             #_atn = F.sigmoid(element_logits[k][:seq_len[k], common_ind])
             #atn = _atn / torch.sum(_atn, 0, keepdim=True)
