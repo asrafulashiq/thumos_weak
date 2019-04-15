@@ -128,7 +128,7 @@ def WLOSS_orig(x, element_logits, weight, labels, seq_len, device, args, gt_all=
 
         for k in range(i, i + args.similar_size):
             elem = element_logits[k][: seq_len[k], common_ind]
-            elem = torch.clamp(elem, max=2)
+            # elem = torch.clamp(elem, max=2)
             atn = F.softmax(elem, dim=0)
 
             n1 = torch.FloatTensor([np.maximum(seq_len[k] - 1, 1)]).to(device)

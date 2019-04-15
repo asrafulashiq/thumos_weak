@@ -3,7 +3,7 @@ import os
 import torch
 import torch.optim as optim
 
-from model import Model as Model
+from model import Model_orig as Model
 import options_expand as options
 
 # from model import Model
