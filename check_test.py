@@ -48,6 +48,7 @@ def sigmoid(x):
 def test(features, model, device):
 
     features = torch.from_numpy(features).float().to(device)
+    features = features.unsqueeze(0)
     with torch.no_grad():
         if IS_ORIGINAL:
             _, x_class = model(Variable(features), is_training=False)
@@ -134,8 +135,8 @@ if __name__ == "__main__":
                 x = x - np.min(x)
                 return np.exp(-x)/np.sum(np.exp(-x))
 
-            logit = np.clip(logit, a_max=3, a_min=None)
-            logit = softmax(logit)
+            #logit = np.clip(logit, a_max=4, a_min=-4)
+            #logit = softmax(logit)
             logit = (logit - np.min(logit))/(np.max(logit)-np.min(logit)+1e-10)
 
             if np.all(logit<0.5):
@@ -158,8 +159,8 @@ if __name__ == "__main__":
                 gt[s:e+1] = 1
 
             # ax.plot(logit_orig, color=palette[cls_idx], linewidth=1, alpha=0.1)
-            #ax.plot(pred, color=palette[cls_idx],
-            #        linestyle='-.', linewidth=1, alpha=0.4)
+            ax.plot(pred, color=palette[cls_idx],
+                    linestyle='-.', linewidth=1, alpha=0.4)
             ax.plot(logit, color=palette[cls_idx], linewidth=2)
             ax.plot(gt, color=palette[cls_idx], linestyle='-',
                     linewidth=2, alpha=0.4)
