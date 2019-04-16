@@ -70,3 +70,4 @@ parser.add_argument(
 parser.add_argument("--beta1", type=float, default=1)
 parser.add_argument("--beta2", type=float, default=1)
 parser.add_argument("--thres", type=float, default=0.5)
+parser.add_argument("--clip", type=float, default=4)

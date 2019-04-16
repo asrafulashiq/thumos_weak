@@ -27,7 +27,7 @@ def MILL(element_logits, seq_len, labels, device):
     return milloss
 
 
-def MILL_all(element_logits, seq_len, labels, device):
+def MILL_all(element_logits, seq_len, labels, device, args):
     """ element_logits should be torch tensor of dimension
         (B, n_element, n_class),
         k should be numpy array of dimension (B,) indicating the top k
@@ -40,7 +40,7 @@ def MILL_all(element_logits, seq_len, labels, device):
     # instance_logits = torch.zeros(0).to(device)
     eps = 1e-8
     loss = 0
-    element_logits = F.hardtanh(element_logits, -4, 4)
+    element_logits = F.hardtanh(element_logits, -args.clip, args.clip)
     for i in range(element_logits.shape[0]):
         tmp, _ = torch.topk(element_logits[i][: seq_len[i]], k=int(k[i]), dim=0)
 
@@ -118,7 +118,7 @@ def WLOSS_orig(x, element_logits, weight, labels, seq_len, device, args, gt_all=
     if gt_all is not None:
         sim_loss_gt = 0.0
 
-    element_logits = F.hardtanh(element_logits, -4, 4)
+    element_logits = F.hardtanh(element_logits, -args.clip, args.clip)
     for i in range(0, args.num_similar * args.similar_size, args.similar_size):
 
         lab = labels[i, :]
@@ -133,7 +133,7 @@ def WLOSS_orig(x, element_logits, weight, labels, seq_len, device, args, gt_all=
         for k in range(i, i + args.similar_size):
             elem = element_logits[k][: seq_len[k], common_ind]
             #elem = torch.clamp(elem, max=3)
-            atn = F.softmax(elem, dim=0)
+        atn = F.softmax(elem, dim=0)
 
             n1 = torch.FloatTensor([np.maximum(seq_len[k] - 1, 1)]).to(device)
             atn_l = (1 - atn) / n1
@@ -307,7 +307,7 @@ def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
 
     final_features, element_logits = model(Variable(features))
 
-    milloss = MILL_all(element_logits, seq_len, labels, device)
+    milloss = MILL_all(element_logits, seq_len, labels, device, args)
 
     weight = model.classifier.weight
     casloss = WLOSS_orig(
