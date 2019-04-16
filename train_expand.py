@@ -103,6 +103,8 @@ def batch_per_dis(X1, X2, w):
     dis_mat = torch.bmm(X_diff, w).squeeze(-1)
     dis_mat = dis_mat.view(dis_mat.shape[0], X_d.shape[1], X_d.shape[2])
 
+  #  dis_mat = 1 - torch.cosine_similarity(X1, X2, dim=-1)
+
     return torch.pow(dis_mat, 2)
 
 
@@ -128,13 +130,13 @@ def WLOSS_orig(x, element_logits, weight, labels, seq_len, device, args, gt_all=
 
         for k in range(i, i + args.similar_size):
             elem = element_logits[k][: seq_len[k], common_ind]
-            # elem = torch.clamp(elem, max=2)
+            elem = torch.clamp(elem, max=3)
             atn = F.softmax(elem, dim=0)
 
-            # n1 = torch.FloatTensor([np.maximum(seq_len[k] - 1, 1)]).to(device)
-            # atn_l = (1 - atn) / n1
+            n1 = torch.FloatTensor([np.maximum(seq_len[k] - 1, 1)]).to(device)
+            atn_l = (1 - atn) / n1
 
-            atn_l = F.softmin(elem, dim=0)
+            #atn_l = F.softmin(elem, dim=0)
 
             #_atn = F.sigmoid(element_logits[k][:seq_len[k], common_ind])
             #atn = _atn / torch.sum(_atn, 0, keepdim=True)

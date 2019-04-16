@@ -29,7 +29,7 @@ else:
     # from model import Model_detect as Model
     import options_expand as options
 
-    out_name = "./fig/test_figures_thumos3.pdf"
+    out_name = "./fig/test_figures_thumos2.pdf"
 
 
 def smooth(v, order=1):
@@ -124,8 +124,7 @@ if __name__ == "__main__":
         for classname in np.unique(labs):
             cls_idx = utils.str2ind(classname, dataset.classlist)
             logit = element_logits[:, cls_idx]
-            # logit[logit < 0] = 0
-            # logit[logit > 2] = 2
+
             logit = smooth(logit)
 
             def softmax(x):
@@ -135,7 +134,13 @@ if __name__ == "__main__":
                 x = x - np.min(x)
                 return np.exp(-x)/np.sum(np.exp(-x))
 
+            logit = np.clip(logit, a_max=3, a_min=None)
+            logit = softmax(logit)
             logit = (logit - np.min(logit))/(np.max(logit)-np.min(logit)+1e-10)
+
+            if np.all(logit<0.5):
+                import pdb
+                pdb.set_trace()
 
             pred_loc = get_pred_loc(logit, threshold=0.5)
             pred = np.zeros(len(feat))
@@ -153,8 +158,8 @@ if __name__ == "__main__":
                 gt[s:e+1] = 1
 
             # ax.plot(logit_orig, color=palette[cls_idx], linewidth=1, alpha=0.1)
-            ax.plot(pred, color=palette[cls_idx],
-                    linestyle='-.', linewidth=1, alpha=0.4)
+            #ax.plot(pred, color=palette[cls_idx],
+            #        linestyle='-.', linewidth=1, alpha=0.4)
             ax.plot(logit, color=palette[cls_idx], linewidth=2)
             ax.plot(gt, color=palette[cls_idx], linestyle='-',
                     linewidth=2, alpha=0.4)

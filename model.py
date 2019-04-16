@@ -72,19 +72,22 @@ class FilterBlock(torch.nn.Module):
         x = F.conv1d(x, self.filter, stride=self.stride,
                      groups=self.in_channel)
         x = x.transpose(1, 2)
-        x = x.squeeze(0)
+        #x = x.squeeze(0)
         return x
 
 class Model(torch.nn.Module):
     def __init__(self, n_feature, n_class):
         super(Model, self).__init__()
 
-        self.filter_block = FilterBlock(n_feature, size=5)
+        self.filter_block = []
+        self.num_filter = 1
+        for i in range(3, 3+2*self.num_filter, 2):
+            self.filter_block.append(FilterBlock(n_feature, size=i))
 
         # self.init_fc = nn.Linear(n_feature, n_feature)
         # self.init_drop = nn.Dropout(0.6)
 
-        self.fc = nn.Linear(n_feature, n_feature)
+        self.fc = nn.Linear((self.num_filter+1) * n_feature, n_feature)
         self.classifier = nn.Linear(n_feature, n_class, bias=True)
         self.dropout = nn.Dropout(0.7)
 
@@ -94,8 +97,11 @@ class Model(torch.nn.Module):
         # inputs = F.relu(self.init_fc(inputs))
         # if is_training:
         #     inputs = self.init_drop(inputs)
-        inputs = self.filter_block(inputs)
-        x = F.relu(self.fc(inputs))
+        x = inputs
+        for block in self.filter_block:
+            x = torch.cat((x, block(inputs)), -1)
+        #inputs = self.filter_block(inputs)
+        x = F.relu(self.fc(x))
         if is_training:
             x = self.dropout(x)
         if is_tmp:
