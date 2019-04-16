@@ -35,7 +35,7 @@ def MILL_all(element_logits, seq_len, labels, device, args):
         labels should be a numpy array of dimension (B, n_class) of 1 or 0
         return is a torch tensor of dimension (B, n_class) """
 
-    k = np.ceil(seq_len / 8).astype("int32")
+    k = np.ceil(seq_len / args.topk).astype("int32")
     # labels = labels / torch.sum(labels, dim=1, keepdim=True)
     # instance_logits = torch.zeros(0).to(device)
     eps = 1e-8
@@ -132,13 +132,11 @@ def WLOSS_orig(x, element_logits, weight, labels, seq_len, device, args, gt_all=
 
         for k in range(i, i + args.similar_size):
             elem = element_logits[k][: seq_len[k], common_ind]
-            #elem = torch.clamp(elem, max=3)
-        atn = F.softmax(elem, dim=0)
-
+            atn = F.softmax(elem, dim=0)
             n1 = torch.FloatTensor([np.maximum(seq_len[k] - 1, 1)]).to(device)
             atn_l = (1 - atn) / n1
 
-            #atn_l = F.softmin(elem, dim=0)
+            # atn_l = F.softmin(elem, dim=0)
 
             #_atn = F.sigmoid(element_logits[k][:seq_len[k], common_ind])
             #atn = _atn / torch.sum(_atn, 0, keepdim=True)
@@ -332,7 +330,7 @@ def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
     logger.log_value("casloss", casloss, itr)
     logger.log_value("total_loss", total_loss, itr)
 
-    print("Iteration: %d, Loss: %.3f" % (itr, total_loss.data.cpu().numpy()))
+    #print("Iteration: %d, Loss: %.3f" % (itr, total_loss.data.cpu().numpy()))
 
     optimizer.zero_grad()
     total_loss.backward()

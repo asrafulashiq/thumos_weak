@@ -37,7 +37,7 @@ def test(itr, dataset, args, model, logger, device):
             F.softmax(
                 torch.mean(
                     torch.topk(
-                        element_logits, k=int(np.ceil(len(features) / 8)), dim=0
+                        element_logits, k=int(np.ceil(len(features) / args.topk)), dim=0
                     )[0],
                     dim=0,
                 ),

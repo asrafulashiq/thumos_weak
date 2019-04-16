@@ -80,7 +80,7 @@ class Model(torch.nn.Module):
         super(Model, self).__init__()
 
         self.filter_block = []
-        self.num_filter = 1
+        self.num_filter = 0
         for i in range(3, 3+2*self.num_filter, 2):
             self.filter_block.append(FilterBlock(n_feature, size=i))
 

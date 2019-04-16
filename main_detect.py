@@ -12,7 +12,7 @@ from test2 import test
 from train_expand import train
 from dataset import Dataset
 from tensorboard_logger import Logger
-
+from tqdm import tqdm
 
 torch.set_default_tensor_type("torch.cuda.FloatTensor")
 
@@ -58,7 +58,7 @@ if __name__ == "__main__":
         raise SystemExit
 
     best_dmap_itr = (0, init_itr)
-    for itr in range(init_itr, args.max_iter):
+    for itr in tqdm(range(init_itr, args.max_iter)):
         train(
             itr, dataset, args, model, optimizer, logger, device,
             scheduler=None
@@ -79,6 +79,7 @@ if __name__ == "__main__":
         if itr % 100 == 0 and not itr == 0:
             if itr % 500 == 0 and not itr == 0:
                 args.test = True
+            print("Iter: {}".format(itr))
             dmap = test(itr, dataset, args, model, logger, device)
 
             args.test = False
