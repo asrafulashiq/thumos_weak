@@ -60,7 +60,7 @@ def MILL_test(element_logits, seq_len, labels, device, args):
     # instance_logits = torch.zeros(0).to(device)
     eps = 1e-8
     loss = 0
-    # element_logits = F.hardtanh(element_logits, -args.clip, args.clip)
+    element_logits = F.hardtanh(element_logits, -args.clip, args.clip)
     for i in range(element_logits.shape[0]):
         # tmp, _ = torch.topk(element_logits[i][: seq_len[i]], k=int(k[i]), dim=0)
         # topk = torch.sigmoid(torch.mean(tmp, 0))

@@ -3,7 +3,7 @@ import os
 import torch
 import torch.optim as optim
 
-from model import Model as Model
+from model import Model_orig as Model
 import options_expand as options
 
 # from model import Model
@@ -84,6 +84,6 @@ if __name__ == "__main__":
 
             args.test = False
 
-    # print()
+    print("\n\n")
     # print(
     #  f"Best Detection mAP : {best_dmap_itr[0]:.3f} @iter {best_dmap_itr[1]}")
