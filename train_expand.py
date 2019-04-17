@@ -26,14 +26,25 @@ def MILL(element_logits, seq_len, labels, device):
     )
     return milloss
 
-def peak_find(x, win_size, min_val=None, max_val=None):
+def peak_find(x, win_size):
     x = x.transpose(0, 1).unsqueeze(0)  # 1, C, L
     out_size = int(np.ceil(x.shape[-1] / win_size))
     x_top = F.adaptive_max_pool1d(x, out_size)
     x_top = x_top.squeeze(0).transpose(0, 1)
     return x_top
 
-
+def n_peak_find(x, args, win_size):
+    # x : L, C
+    split_list = [win_size]*(x.shape[0]//win_size-1) + \
+        [x.shape[0] - max(0, win_size*(x.shape[0]//win_size-1))]
+    splits = torch.split(x, split_list, dim=0)
+    peak = torch.Tensor()
+    for x_split in splits:
+        sp_topk = torch.topk(x_split, int(min(x.shape[0], args.topk2)),
+                             dim=0)[0]
+        mean_sp = torch.mean(sp_topk, 0, keepdim=True)
+        peak = torch.cat((peak, mean_sp))
+    return peak
 
 
 def MILL_test(element_logits, seq_len, labels, device, args):
@@ -54,7 +65,7 @@ def MILL_test(element_logits, seq_len, labels, device, args):
         # tmp, _ = torch.topk(element_logits[i][: seq_len[i]], k=int(k[i]), dim=0)
         # topk = torch.sigmoid(torch.mean(tmp, 0))
 
-        peaks = peak_find(element_logits[i][: seq_len[i]],
+        peaks = n_peak_find(element_logits[i][: seq_len[i]], args,
                           win_size=int(args.topk))
 
         block_peak = torch.sigmoid(peaks)
