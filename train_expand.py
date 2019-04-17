@@ -26,6 +26,71 @@ def MILL(element_logits, seq_len, labels, device):
     )
     return milloss
 
+def peak_find(x, win_size, min_val=None, max_val=None):
+    x = x.transpose(0, 1).unsqueeze(0)  # 1, C, L
+    out_size = int(np.ceil(x.shape[-1] / win_size))
+    x_top = F.adaptive_max_pool1d(x, out_size)
+    x_top = x_top.squeeze(0).transpose(0, 1)
+    return x_top
+
+
+
+
+def MILL_test(element_logits, seq_len, labels, device, args):
+    """ element_logits should be torch tensor of dimension
+        (B, n_element, n_class),
+        k should be numpy array of dimension (B,) indicating the top k
+        locations to average over,
+        labels should be a numpy array of dimension (B, n_class) of 1 or 0
+        return is a torch tensor of dimension (B, n_class) """
+
+    k = np.ceil(seq_len / args.topk).astype("int32")
+    # labels = labels / torch.sum(labels, dim=1, keepdim=True)
+    # instance_logits = torch.zeros(0).to(device)
+    eps = 1e-8
+    loss = 0
+    # element_logits = F.hardtanh(element_logits, -args.clip, args.clip)
+    for i in range(element_logits.shape[0]):
+        # tmp, _ = torch.topk(element_logits[i][: seq_len[i]], k=int(k[i]), dim=0)
+        # topk = torch.sigmoid(torch.mean(tmp, 0))
+
+        peaks = peak_find(element_logits[i][: seq_len[i]],
+                          win_size=int(args.topk))
+
+        block_peak = torch.sigmoid(peaks)
+
+        prob = 1 - torch.prod( 1-block_peak, 0)
+
+        lab = Variable(labels[i])
+        loss1 = -torch.sum(lab * torch.log(prob + eps)) / torch.sum(lab)
+        loss2 = -torch.sum((1 - lab) * torch.log(1 - prob + eps)) / torch.sum(1 - lab)
+
+
+        # tmp = torch.topk(peaks, k=int(np.ceil(peaks.shape[0]/args.topk2)), dim=0)[0]
+        # # tmp = torch.topk(peaks, k=int(min(peaks.shape[0], args.topk2)), dim=0)[0]
+        # topk = torch.sigmoid(torch.mean(tmp, 0))
+        # #neg_topk = torch.sigmoid(
+        # #    peak_find(element_logits[i][: seq_len[i]], int(k[i]))
+        # #)
+
+        # lab = Variable(labels[i])
+        # loss1 = -torch.sum(lab * torch.log(topk + eps)) / torch.sum(lab)
+        # loss2 = -torch.sum((1 - lab) * torch.log(1 - topk + eps)) / torch.sum(1 - lab)
+
+        # lab = Variable(labels[i])
+        # loss1 = -torch.sum(lab * torch.log(topk + eps)) / torch.sum(lab)
+        # loss2 = -torch.sum((1 - lab) * torch.log(1 - topk + eps)) / torch.sum(1 - lab)
+
+        loss += 1 / 2 * (loss1 + loss2)
+        if torch.isnan(loss):
+            import pdb
+
+            pdb.set_trace()
+
+    milloss = loss / element_logits.shape[0]
+    return milloss
+
+
 
 def MILL_all(element_logits, seq_len, labels, device, args):
     """ element_logits should be torch tensor of dimension
@@ -43,11 +108,12 @@ def MILL_all(element_logits, seq_len, labels, device, args):
     element_logits = F.hardtanh(element_logits, -args.clip, args.clip)
     for i in range(element_logits.shape[0]):
         tmp, _ = torch.topk(element_logits[i][: seq_len[i]], k=int(k[i]), dim=0)
-
         topk = torch.sigmoid(torch.mean(tmp, 0))
+
         lab = Variable(labels[i])
         loss1 = -torch.sum(lab * torch.log(topk + eps)) / torch.sum(lab)
         loss2 = -torch.sum((1 - lab) * torch.log(1 - topk + eps)) / torch.sum(1 - lab)
+
         loss += 1 / 2 * (loss1 + loss2)
         if torch.isnan(loss):
             import pdb
@@ -305,19 +371,19 @@ def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
 
     final_features, element_logits = model(Variable(features))
 
-    milloss = MILL_all(element_logits, seq_len, labels, device, args)
+    milloss = MILL_test(element_logits, seq_len, labels, device, args)
 
     weight = model.classifier.weight
-    casloss = WLOSS_orig(
-        final_features, element_logits, weight, labels, seq_len, device, args, None
-    )
+    # casloss = WLOSS_orig(
+    #     final_features, element_logits, weight, labels, seq_len, device, args, None
+    # )
     # casloss = CASL(
     #     final_features, element_logits, weight, labels, seq_len, device, args, None
     # )
 
     # closs = continuity_loss(element_logits, labels, seq_len, device)
 
-    total_loss = args.Lambda * milloss + (1 - args.Lambda) * casloss
+    total_loss = args.Lambda * milloss #+ (1 - args.Lambda) * casloss
 
     if torch.isnan(total_loss):
         import pdb
@@ -327,10 +393,10 @@ def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
     logger.log_value("weight", torch.norm(weight), itr)
 
     logger.log_value("milloss", milloss, itr)
-    logger.log_value("casloss", casloss, itr)
+    # logger.log_value("casloss", casloss, itr)
     logger.log_value("total_loss", total_loss, itr)
 
-    #print("Iteration: %d, Loss: %.3f" % (itr, total_loss.data.cpu().numpy()))
+    print("Iteration: %d, Loss: %.3f" % (itr, total_loss.data.cpu().numpy()))
 
     optimizer.zero_grad()
     total_loss.backward()

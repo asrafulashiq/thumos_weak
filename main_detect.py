@@ -58,7 +58,7 @@ if __name__ == "__main__":
         raise SystemExit
 
     best_dmap_itr = (0, init_itr)
-    for itr in tqdm(range(init_itr, args.max_iter)):
+    for itr in (range(init_itr, args.max_iter)):
         train(
             itr, dataset, args, model, optimizer, logger, device,
             scheduler=None
