@@ -175,7 +175,7 @@ class ANETdetection(object):
             pp = -p
             [pp[:, i].sort() for i in range(np.shape(pp)[1])]
             pp = -pp
-            c_s = np.mean(pp[: int(np.ceil(np.shape(pp)[0] / self.args.topk)), :], axis=0)
+            c_s = np.mean(pp[: int(np.ceil(np.shape(pp)[0] / 8)), :], axis=0)
             ind = c_s > -50
             c_score.append(c_s)
             predictions_mod.append(p * ind)
@@ -204,7 +204,7 @@ class ANETdetection(object):
                 for j in range(len(s)):
                     if e[j] - s[j] >= 2:
                         segment_predict.append(
-                            [i, s[j], e[j], np.max(tmp[s[j] : e[j]]) + 0. * c_score[i][c],
+                            [i, s[j], e[j], np.max(tmp[s[j] : e[j]]) + 0.7 * c_score[i][c],
                             c]
                         )
         segment_predict = np.array(segment_predict)
