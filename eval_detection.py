@@ -27,6 +27,12 @@ def strlist2indlist(strlist, classlist):
     return [str2ind(s, classlist) for s in strlist]
 
 
+
+def sigmoid(x, eps=1e-10):
+    return 1/(1+np.exp(-x) + eps)
+
+
+
 def smooth(v, order=2):
     return v
     # l = min(5, len(v))
@@ -101,33 +107,44 @@ class ANETdetection(object):
         self.classlist = classlist
 
         # Keep only the test subset annotations
-        gts, gtl, vn, dn = [], [], [], []
-        for i, s in enumerate(subset):
-            if subset[i] == self.subset:
-                gts.append(gtsegments[i])
-                gtl.append(gtlabels[i])
-                vn.append(videoname[i])
-                dn.append(duration[i, 0])
-        gtsegments = gts
-        gtlabels = gtl
-        videoname = vn
-        duration = dn
+        # gts, gtl, vn, dn = [], [], [], []
+        # for i, s in enumerate(subset):
+        #     if subset[i] == self.subset:
+        #         gts.append(gtsegments[i])
+        #         gtl.append(gtlabels[i])
+        #         vn.append(videoname[i])
+        #         dn.append(duration[i, 0])
+        # gtsegments = gts
+        # gtlabels = gtl
+        # videoname = vn
+        # duration = dn
+        subset_ind = (subset == self.subset)
+        gtsegments = gtsegments[subset_ind]
+        gtlabels = gtlabels[subset_ind]
+        videoname = videoname[subset_ind]
+        duration = duration[subset_ind]
+
+        self.idx_to_take = [i for i, s in enumerate(gtsegments)
+                            if len(s) >0 ]
 
         # keep ground truth and predictions for instances with temporal annotations
-        gts, gtl, vn, pred, dn = [], [], [], [], []
-        self.idx_to_take = []
-        for i, s in enumerate(gtsegments):
-            if len(s):
-                gts.append(gtsegments[i])
-                gtl.append(gtlabels[i])
-                vn.append(videoname[i])
-                # pred.append(predictions[i])
-                dn.append(duration[i])
-                self.idx_to_take.append(i)
-        gtsegments = gts
-        gtlabels = gtl
-        videoname = vn
+        # gts, gtl, vn, pred, dn = [], [], [], [], []
+        # self.idx_to_take = []
+        # for i, s in enumerate(gtsegments):
+        #     if len(s):
+        #         gts.append(gtsegments[i])
+        #         gtl.append(gtlabels[i])
+        #         vn.append(videoname[i])
+        #         # pred.append(predictions[i])
+        #         dn.append(duration[i])
+        #         self.idx_to_take.append(i)
+        # gtsegments = gts
+        # gtlabels = gtl
+        # videoname = vn
         # predictions = pred
+        gtsegments = gtsegments[self.idx_to_take]
+        gtlabels = gtlabels[self.idx_to_take]
+        videoname = videoname[self.idx_to_take]
 
         self.videoname = videoname
 
@@ -160,6 +177,32 @@ class ANETdetection(object):
         self.ground_truth = ground_truth
         self.activity_index = {i:templabelidx[i] for i in range(len(templabelidx))}
 
+    def get_topk_mean(self, x, k, axis=0):
+        return np.mean(np.sort(x, axis=axis)[-int(k):, :], axis=0)
+
+
+    def _get_vid_score(self, pred):
+        # pred : (n, class)
+        if self.args is None:
+            k = 8
+            topk_mean = self.get_topk_mean(pred, k)
+            # ind = topk_mean > -50
+            return pred, topk_mean
+
+        win_size = int(self.args.topk)
+        split_list = [i*win_size for i in range(1, int(pred.shape[0]//win_size))]
+        splits = np.split(pred, split_list, axis=0)
+
+        tops = []
+        for each_split in splits:
+            top_mean = self.get_topk_mean(each_split, self.args.topk2)
+            tops.append(top_mean)
+        tops = np.array(tops)
+        c_s = np.max(tops, axis=0)
+        # prob = 1 - np.prod(1-tops, axis=0)
+        # inv_prob = np.log(prob/(1-prob))
+        return pred, c_s
+
 
     def _import_prediction(self, predictions):
         pred = []
@@ -172,13 +215,15 @@ class ANETdetection(object):
         predictions_mod = []
         c_score = []
         for p in predictions:
-            pp = -p
-            [pp[:, i].sort() for i in range(np.shape(pp)[1])]
-            pp = -pp
-            c_s = np.mean(pp[: int(np.ceil(np.shape(pp)[0] / 8)), :], axis=0)
-            ind = c_s > -50
+            # pp = -p
+            # [pp[:, i].sort() for i in range(np.shape(pp)[1])]
+            # pp = -pp
+            # c_s = np.mean(pp[: int(np.ceil(np.shape(pp)[0] / 8)), :], axis=0)
+            # ind = c_s > -50
+            # pind = p * ind
+            pind, c_s = self._get_vid_score(p)
             c_score.append(c_s)
-            predictions_mod.append(p * ind)
+            predictions_mod.append(pind)
 
         predictions = predictions_mod
         args = self.args
