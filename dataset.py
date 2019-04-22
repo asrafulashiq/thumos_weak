@@ -22,7 +22,7 @@ class Dataset:
         self.subset = np.load(self.path_to_annotations + "subset.npy")
         self.videonames = np.load(self.path_to_annotations + "videoname.npy")
         self.batch_size = args.batch_size
-        # self.batch_size = args.num_similar * args.similar_size
+        #self.batch_size = args.num_similar * args.similar_size
         self.t_max = args.max_seqlen
         self.trainidx = []
         self.testidx = []
@@ -33,19 +33,22 @@ class Dataset:
             for labs in self.labels
         ]
 
-        ambilist = self.path_to_annotations + "/Ambiguous_test.txt"
-        ambilist = list(open(ambilist, "r"))
-        ambilist = [a.strip("\n").split(" ")[0] for a in ambilist]
+        try:
+            ambilist = self.path_to_annotations + "Ambiguous_test.txt"
+            ambilist = list(open(ambilist, "r"))
+            ambilist = [a.strip("\n").split(" ")[0] for a in ambilist]
+        except:
+            ambilist = []
+
+        self.train_test_idx()
+        self.classwise_feature_mapping()
 
         self.num_gt = 5
         self.gt_loc_ind = np.zeros(
             (len(self.classlist), self.num_gt,
              self.feature_size), dtype=np.float32
         )
-        self.train_test_idx()
-        self.classwise_feature_mapping()
-
-        #self.get_gt_for_sup()
+        self.get_gt_for_sup()
 
         self.normalize = False
         self.mode = mode
@@ -98,11 +101,18 @@ class Dataset:
             return self.feat_loc
 
     def train_test_idx(self):
-        for i, s in enumerate(self.subset):
-            if s.decode("utf-8") == "validation":  # Specific to Thumos14
-                self.trainidx.append(i)
-            elif s.decode("utf-8") == "test":
-                self.testidx.append(i)
+        if self.dataset_name == "Thumos14reduced":
+            for i, s in enumerate(self.subset):
+                if s.decode("utf-8") == "validation":  # Specific to Thumos14
+                    self.trainidx.append(i)
+                elif s.decode("utf-8") == "test":
+                    self.testidx.append(i)
+        else:
+            for i, s in enumerate(self.subset):
+                if s.decode("utf-8") == "training":  # Specific to Thumos14
+                    self.trainidx.append(i)
+                elif s.decode("utf-8") == "validation":
+                    self.testidx.append(i)
 
     def classwise_feature_mapping(self):
         for category in self.classlist:
@@ -115,7 +125,7 @@ class Dataset:
 
             self.classwiseidx.append(idx)
 
-    def load_data(self, n_similar=0, is_training=True, similar_size=2):
+    def load_data(self, n_similar=3, is_training=True, similar_size=2):
         if is_training:
             labels = []
             idx = []
@@ -158,7 +168,6 @@ class Dataset:
         else:
             labs = self.labels_multihot[self.testidx[self.currenttestidx]]
             feat = self.features[self.testidx[self.currenttestidx]]
-            feat = utils.process_feat(feat, normalize=self.normalize)
 
             if self.currenttestidx == len(self.testidx) - 1:
                 done = True
