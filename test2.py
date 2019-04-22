@@ -57,7 +57,7 @@ def test(itr, dataset, args, model, logger, device):
 
     # dmap, iou = dmAP(element_logits_stack, dataset.path_to_annotations, args)
 
-    iou = [0.1, 0.3, 0.5]
+    iou = [0.1, 0.3, 0.5, 0.7]
 
     dmap_detect = ANETdetection(dataset.path_to_annotations, iou, args=args)
     dmap_detect._import_prediction(element_logits_stack)

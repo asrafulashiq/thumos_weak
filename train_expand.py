@@ -270,6 +270,11 @@ def WLOSS_orig(x, element_logits, weight, labels, seq_len, device, args, gt_all=
         loss = torch.sum(torch.max(
             d1 - d2 + args.dis, torch.FloatTensor([0.0]).to(device)
         ))
+
+        #loss = torch.sum(
+        #    d1 + torch.max(args.dis-d2, torch.FloatTensor([0.0]).to(device))
+        #)
+
         # loss2 = max_like(
         #     d1 - d3 + args.dis, torch.FloatTensor([0.0]).to(device), beta=args.beta2
         # )
