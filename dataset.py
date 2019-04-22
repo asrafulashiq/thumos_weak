@@ -45,7 +45,7 @@ class Dataset:
         self.train_test_idx()
         self.classwise_feature_mapping()
 
-        self.get_gt_for_sup()
+        #self.get_gt_for_sup()
 
         self.normalize = False
         self.mode = mode

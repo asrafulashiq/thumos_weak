@@ -74,7 +74,7 @@ if __name__ == "__main__":
                     "model_state_dict": model_state
                     # 'optimizer_state_dict': optimizer.state_dict()
                 },
-                "./ckpt/thumos/" + args.model_name + ".pkl",
+                "./ckpt/anet/" + args.model_name + ".pkl",
             )
         if itr % 100 == 0 and not itr == 0:
             if itr % 500 == 0 and not itr == 0:
