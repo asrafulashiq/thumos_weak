@@ -52,3 +52,18 @@ Classification map 95.275068
 - Detection map @ 0.300000 = 46.601117
 - Detection map @ 0.500000 = 28.447544
 - Detection map @ 0.700000 = 9.305242
+
+## LBCE + Euclidean:
+Classification map 93.702575
+Detection map @ 0.100000 = 58.174610
+Detection map @ 0.300000 = 42.230276
+Detection map @ 0.500000 = 24.563402
+Detection map @ 0.700000 = 7.413926
+
+
+## Random frames:
+Classification map 93.518573
+Detection map @ 0.100000 = 61.798149
+Detection map @ 0.300000 = 46.344809
+Detection map @ 0.500000 = 28.793806
+Detection map @ 0.700000 = 9.780732

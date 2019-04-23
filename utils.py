@@ -22,6 +22,11 @@ def idx2multihot(id_list, num_class):
 
 
 def random_extract(feat, t_max):
+    # ind = np.arange(feat.shape[0])
+    # splits = np.array_split(ind, t_max)
+    # nind = np.array([np.random.choice(split, 1)[0] for split in splits])
+    # return feat[nind]
+
     # ind = np.random.choice(feat.shape[0], size=t_max)
     # ind = sorted(ind)
     # return feat[ind]
