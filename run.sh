@@ -1,4 +1,8 @@
 
+python main_detect.py -m test --max-iter 6001 --topk 60 --topk2 10 >> ./tmp_log/topk2.txt
+python main_detect.py -m test --max-iter 6001 --topk 60 --topk2 30 >> ./tmp_log/topk2.txt
+python main_detect.py -m test --max-iter 6001 --topk 60 --topk2 20 >> ./tmp_log/topk2.txt
+python main_detect.py -m test --max-iter 6001 --topk 60 --topk2 5 >> ./tmp_log/topk2.txt
 
 
 ## effect of l_w (topk)
