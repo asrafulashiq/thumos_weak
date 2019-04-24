@@ -3,7 +3,7 @@ import os
 import torch
 import torch.optim as optim
 
-from model import Model as Model
+from model import Model_orig as Model
 import options_expand as options
 
 # from model import Model
@@ -80,7 +80,7 @@ if __name__ == "__main__":
             if itr % 500 == 0 and not itr == 0:
                 args.test = True
             print("Iter: {}".format(itr))
-            dmap = test(itr, dataset, args, model, logger, device)
+            test(itr, dataset, args, model, logger, device)
 
             args.test = False
 

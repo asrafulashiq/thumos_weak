@@ -34,12 +34,54 @@ def sigmoid(x, eps=1e-10):
 
 
 def smooth(v, order=1):
-    #return v
+    # return v
     l = min(50, len(v))
     l = l - (1 - l % 2)
     if len(v) <= order:
         return v
     return savgol_filter(v, l, order)
+
+
+def smooth2(x,window_len=25,window='hanning'):
+    """smooth the data using a window with requested size.
+    input:
+        x: the input signal
+        window_len: the dimension of the smoothing window; should be an odd integer
+        window: the type of window from 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'
+            flat window will produce a moving average smoothing.
+
+    output:
+        the smoothed signal
+
+    example:
+    """
+    # return x
+    if x.ndim != 1:
+        raise ValueError("smooth only accepts 1 dimension arrays.")
+
+    if x.size < window_len:
+        return x
+        raise ValueError("Input vector needs to be bigger than window size.")
+
+
+    if window_len<3:
+        return x
+
+
+    if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
+        raise ValueError("Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
+
+
+    s=np.r_[x[window_len-1:0:-1],x,x[-2:-window_len-1:-1]]
+    #print(len(s))
+    if window == 'flat': #moving average
+        w=np.ones(window_len,'d')
+    else:
+        w=eval('np.'+window+'(window_len)')
+
+    y=np.convolve(w/w.sum(),s,mode='valid')
+    return y
+
 
 def filter_segments(segment_predict, videonames, ambilist):
     ind = np.zeros(np.shape(segment_predict)[0])

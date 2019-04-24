@@ -1,8 +1,9 @@
 import torch
-from model import Model
+from model import Model_orig as Model
 from dataset import Dataset
 import utils
 import numpy as np
+import numpy
 import matplotlib.pyplot as plt
 from pathlib import Path
 from collections import defaultdict, deque
@@ -29,16 +30,64 @@ else:
     # from model import Model_detect as Model
     import options_expand as options
 
-    out_name = "./fig/test_figures_thumos2.pdf"
+    out_name = "./fig/test_figures_anet.pdf"
+
+
+def smooth2(x,window_len=11,window='hanning'):
+    """smooth the data using a window with requested size.
+
+    This method is based on the convolution of a scaled window with the signal.
+    The signal is prepared by introducing reflected copies of the signal
+    (with the window size) in both ends so that transient parts are minimized
+    in the begining and end part of the output signal.
+
+    input:
+        x: the input signal
+        window_len: the dimension of the smoothing window; should be an odd integer
+        window: the type of window from 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'
+            flat window will produce a moving average smoothing.
+
+    output:
+        the smoothed signal
+
+    example:
+    """
+
+    if x.ndim != 1:
+        raise ValueError("smooth only accepts 1 dimension arrays.")
+
+    if x.size < window_len:
+        return x
+        raise ValueError("Input vector needs to be bigger than window size.")
+
+
+    if window_len<3:
+        return x
+
+
+    if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
+        raise ValueError("Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
+
+
+    s=np.r_[x[window_len-1:0:-1],x,x[-2:-window_len-1:-1]]
+    #print(len(s))
+    if window == 'flat': #moving average
+        w=np.ones(window_len,'d')
+    else:
+        w=eval('np.'+window+'(window_len)')
+
+    y=np.convolve(w/w.sum(),s,mode='valid')
+    return y
 
 
 def smooth(v, order=1):
-    return v
-    l = min(50, len(v))
-    l = l - (1 - l % 2)
-    if len(v) <= order:
-        return v
-    return savgol_filter(v, l, order)
+    #return v
+    # l = min(100, len(v))
+    # l = l - (1 - l % 2)
+    # if len(v) <= order:
+    #     return v
+    # return savgol_filter(v, l, order)
+    pass
 
 
 def sigmoid(x):
@@ -126,7 +175,7 @@ if __name__ == "__main__":
             cls_idx = utils.str2ind(classname, dataset.classlist)
             logit = element_logits[:, cls_idx]
 
-            logit = smooth(logit)
+            logit = smooth2(logit, 20)
 
             def softmax(x):
                 x = x - np.max(x)
@@ -135,19 +184,20 @@ if __name__ == "__main__":
                 x = x - np.min(x)
                 return np.exp(-x)/np.sum(np.exp(-x))
 
-            #logit = np.clip(logit, a_max=4, a_min=-4)
-            #logit = softmax(logit)
+            # logit = np.clip(logit, a_max=4, a_min=-4)
+            # logit = softmax(logit)
             logit = (logit - np.min(logit))/(np.max(logit)-np.min(logit)+1e-10)
 
-            if np.all(logit<0.5):
-                import pdb
-                pdb.set_trace()
+            # if np.all(logit<0.5):
+            #     import pdb
+            #     pdb.set_trace()
 
-            pred_loc = get_pred_loc(logit, threshold=0.5)
             pred = np.zeros(len(feat))
-
-            for _loc in pred_loc:
-                pred[_loc[0]:_loc[1]+1] = 1
+            if np.any(logit>0.1):
+                pred_loc = get_pred_loc(logit, threshold=0.2)
+                pred = np.zeros(len(feat))
+                for _loc in pred_loc:
+                    pred[_loc[0]:_loc[1]+1] = 1
 
             idx = np.where(labs == classname)[0]
             gt = np.zeros(len(feat))
@@ -166,7 +216,7 @@ if __name__ == "__main__":
                     linewidth=2, alpha=0.4)
         # ax.plot(atn, color=(0, 0, 0), alpha=0.6)
         ax.grid(True)
-        ax.set_yticks([0, 0.2, 0.4, 0.5, 0.6, 0.8])
+        ax.set_yticks([0, 0.2, 0.4, 0.5, 0.7, 0.9])
         ax.set_title(",".join([ii[:4] for ii in np.unique(labs)]))
         ax.set_ylim(-0.05, 1.1)
     with PdfPages(out_name) as pdf:

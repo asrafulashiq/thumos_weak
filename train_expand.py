@@ -409,7 +409,7 @@ def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
     logger.log_value("weight", torch.norm(weight), itr)
 
     logger.log_value("milloss", milloss, itr)
-    # logger.log_value("casloss", casloss, itr)
+    logger.log_value("casloss", casloss, itr)
     logger.log_value("total_loss", total_loss, itr)
 
     # print("Iteration: %d, Loss: %.3f" % (itr, total_loss.data.cpu().numpy()))
