@@ -1,8 +1,8 @@
-python main.py -m thumos --max-iter 20001 >> tmp_log/orig_thumos.txt
-python main.py -m test_lamb --Lambda 0.1 --max-iter 10001 >> tmp_log/lamb1.txt
-python main.py -m test_lamb --Lambda 0.3 --max-iter 10001 >> tmp_log/lamb1.txt
-python main.py -m test_lamb --Lambda 0.7 --max-iter 10001 >> tmp_log/lamb1.txt
-python main.py -m test_lamb --Lambda 0.9 --max-iter 10001 >> tmp_log/lamb1.txt
+python main_detect.py -m thumos --max-iter 20001 >> tmp_log/orig_thumos.txt
+python main_detect.py -m test_lamb --Lambda 0.1 --max-iter 10001 >> tmp_log/lamb1.txt
+python main_detect.py -m test_lamb --Lambda 0.3 --max-iter 10001 >> tmp_log/lamb1.txt
+python main_detect.py -m test_lamb --Lambda 0.7 --max-iter 10001 >> tmp_log/lamb1.txt
+python main_detect.py -m test_lamb --Lambda 0.9 --max-iter 10001 >> tmp_log/lamb1.txt
 
 
 
