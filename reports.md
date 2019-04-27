@@ -52,3 +52,13 @@ Classification map 95.275068
 - Detection map @ 0.300000 = 46.601117
 - Detection map @ 0.500000 = 28.447544
 - Detection map @ 0.700000 = 9.305242
+
+
+
+## ActivityNet:
+
+Classification map 92.862654                                              │
+- Detection map @ 0.100000 = 60.449673                                      │
+- Detection map @ 0.300000 = 49.424174                                      │
+- Detection map @ 0.500000 = 33.956667                                      │
+- Detection map @ 0.700000 = 17.855664

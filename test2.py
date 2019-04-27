@@ -57,7 +57,10 @@ def test(itr, dataset, args, model, logger, device):
 
     # dmap, iou = dmAP(element_logits_stack, dataset.path_to_annotations, args)
 
-    iou = [0.3, 0.5]
+    if args.test:
+        iou = [0.1, 0.3, 0.5, 0.7]
+    else:
+        iou = [0.3, 0.5]
 
     dmap_detect = ANETdetection(dataset.path_to_annotations, iou, args=args,
                                 subset="validation")
