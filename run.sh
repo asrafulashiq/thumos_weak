@@ -1,8 +1,15 @@
+python main.py -m thumos --max-iter 20001 >> tmp_log/orig_thumos.txt
+python main.py -m test_lamb --Lambda 0.1 --max-iter 10001 >> tmp_log/lamb1.txt
+python main.py -m test_lamb --Lambda 0.3 --max-iter 10001 >> tmp_log/lamb1.txt
+python main.py -m test_lamb --Lambda 0.7 --max-iter 10001 >> tmp_log/lamb1.txt
+python main.py -m test_lamb --Lambda 0.9 --max-iter 10001 >> tmp_log/lamb1.txt
 
-python main_detect.py -m test --max-iter 6001 --topk 60 --topk2 10 >> ./tmp_log/topk2.txt
-python main_detect.py -m test --max-iter 6001 --topk 60 --topk2 30 >> ./tmp_log/topk2.txt
-python main_detect.py -m test --max-iter 6001 --topk 60 --topk2 20 >> ./tmp_log/topk2.txt
-python main_detect.py -m test --max-iter 6001 --topk 60 --topk2 5 >> ./tmp_log/topk2.txt
+
+
+# python main_detect.py -m test --max-iter 6001 --topk 60 --topk2 10 >> ./tmp_log/topk2.txt
+# python main_detect.py -m test --max-iter 6001 --topk 60 --topk2 30 >> ./tmp_log/topk2.txt
+# python main_detect.py -m test --max-iter 6001 --topk 60 --topk2 20 >> ./tmp_log/topk2.txt
+# python main_detect.py -m test --max-iter 6001 --topk 60 --topk2 5 >> ./tmp_log/topk2.txt
 
 
 ## effect of l_w (topk)
