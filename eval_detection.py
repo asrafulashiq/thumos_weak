@@ -34,7 +34,7 @@ def sigmoid(x, eps=1e-10):
 
 
 def smooth(v, order=1):
-    # return v
+    return v
     l = min(50, len(v))
     l = l - (1 - l % 2)
     if len(v) <= order:
