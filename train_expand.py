@@ -387,7 +387,8 @@ def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
 
     final_features, element_logits = model(Variable(features))
 
-    milloss = MILL_test(element_logits, seq_len, labels, device, args)
+    # milloss = MILL_test(element_logits, seq_len, labels, device, args)
+    milloss = MILL_all(element_logits, seq_len, labels, device, args)
 
     weight = model.classifier.weight
     casloss = WLOSS_orig(
