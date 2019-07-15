@@ -37,6 +37,28 @@ class Model_orig(torch.nn.Module):
         return x, self.classifier(x)
 
 
+class Model_WTALC(torch.nn.Module):
+    def __init__(self, n_feature, n_class):
+        super(Model, self).__init__()
+
+        self.fc = nn.Linear(n_feature, n_feature)
+        self.fc1 = nn.Linear(n_feature, n_feature)
+        self.classifier = nn.Linear(n_feature, n_class)
+        self.dropout = nn.Dropout(0.7)
+
+        # self.apply(weights_init)
+
+        #self.train()
+
+    def forward(self, inputs, is_training=True):
+
+        x = F.relu(self.fc(inputs))
+        if is_training:
+            x = self.dropout(x)
+        return x, self.classifier(x)
+
+
+
 def tri_filter(size=3):
     k = size//2
     if k==0:

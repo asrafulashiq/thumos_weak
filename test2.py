@@ -62,6 +62,7 @@ def test(itr, dataset, args, model, logger, device):
     dmap_detect = ANETdetection(dataset.path_to_annotations, iou, args=args)
     dmap_detect._import_prediction(element_logits_stack)
     dmap = dmap_detect.evaluate()
+    dmap_detect.save_info("info.pkl")
 
     if args.dataset_name == "Thumos14":
         test_set = sio.loadmat("test_set_meta.mat")["test_videos"][0]

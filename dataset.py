@@ -188,4 +188,5 @@ class Dataset:
             feat = self.features[idx]
             labs = self._labels[idx]
             seg = self.segments[idx]
-            yield np.array(feat), np.array(labs), np.array(seg)
+            vname = self.videonames[idx]
+            yield np.array(feat), np.array(labs), np.array(seg), vname

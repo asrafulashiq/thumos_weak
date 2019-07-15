@@ -106,18 +106,6 @@ class ANETdetection(object):
         self.ambilist = ambilist
         self.classlist = classlist
 
-        # Keep only the test subset annotations
-        # gts, gtl, vn, dn = [], [], [], []
-        # for i, s in enumerate(subset):
-        #     if subset[i] == self.subset:
-        #         gts.append(gtsegments[i])
-        #         gtl.append(gtlabels[i])
-        #         vn.append(videoname[i])
-        #         dn.append(duration[i, 0])
-        # gtsegments = gts
-        # gtlabels = gtl
-        # videoname = vn
-        # duration = dn
         subset_ind = (subset == self.subset)
         gtsegments = gtsegments[subset_ind]
         gtlabels = gtlabels[subset_ind]
@@ -127,21 +115,6 @@ class ANETdetection(object):
         self.idx_to_take = [i for i, s in enumerate(gtsegments)
                             if len(s) >0 ]
 
-        # keep ground truth and predictions for instances with temporal annotations
-        # gts, gtl, vn, pred, dn = [], [], [], [], []
-        # self.idx_to_take = []
-        # for i, s in enumerate(gtsegments):
-        #     if len(s):
-        #         gts.append(gtsegments[i])
-        #         gtl.append(gtlabels[i])
-        #         vn.append(videoname[i])
-        #         # pred.append(predictions[i])
-        #         dn.append(duration[i])
-        #         self.idx_to_take.append(i)
-        # gtsegments = gts
-        # gtlabels = gtl
-        # videoname = vn
-        # predictions = pred
         gtsegments = gtsegments[self.idx_to_take]
         gtlabels = gtlabels[self.idx_to_take]
         videoname = videoname[self.idx_to_take]
@@ -337,6 +310,17 @@ class ANETdetection(object):
                 print("Detection map @ %f = %f" % (self.tiou_thresholds[k], self.mAP[k]))
             print("Average-mAP: {}\n".format(self.mAP))
         return self.mAP
+
+
+    def save_info(self, fname):
+        import pickle
+        Dat = {
+            "prediction": self.prediction,
+            "gt": self.ground_truth
+        }
+        with open(fname, 'wb') as fp:
+            pickle.dump(Dat, fp)
+
 
 
 def compute_average_precision_detection(
