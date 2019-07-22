@@ -16,3 +16,5 @@ tmp_log/
 ActivityNet1.2-Annotations/*
 ActivityNet1.2-I3D-JOINTFeatures.npy
 paper/
+fig/*
+*.eps

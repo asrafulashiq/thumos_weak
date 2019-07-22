@@ -97,13 +97,15 @@ if __name__ == "__main__":
 
     # if torch.cuda.device_count() > 1:
     #     model = torch.nn.DataParallel(model)
-    args.pretrained_ckpt = './ckpt/thumos/thumos_base.pkl'
+    # args.pretrained_ckpt = './ckpt/thumos/thumos_base.pkl'
     if args.pretrained_ckpt is not None:
         checkpoint = torch.load(args.pretrained_ckpt)
         if IS_ORIGINAL:
             model.load_state_dict(checkpoint)
         else:
             model.load_state_dict(checkpoint['model_state_dict'])
+    else:
+        raise SystemExit
     model.eval()
 
     total_images = len(dataset.testidx)
@@ -167,8 +169,10 @@ if __name__ == "__main__":
             ax.hlines([0.30, 0.65], xmin=0, xmax=len(gt), linestyles='dashed', color='gray',
             linewidth=0.5)
             ax.set_ylim(0, 1)
-            ax.set_yticks([0.15, 0.45, 0.8])
-            ax.set_yticklabels(["score", "detection", "ground-truths"])
+            ax.set_xticks([])
+            ax.set_yticks([])
+            # ax.set_yticks([0.15, 0.45, 0.8])
+            # ax.set_yticklabels(["score", "detection", "ground-truths"])
             
             fname = str(vname.decode("utf8"))+ " _" + str(classname)
             # ax.plot(pred, color=palette[cls_idx],
@@ -180,6 +184,7 @@ if __name__ == "__main__":
         # ax.plot(atn, color=(0, 0, 0), alpha=0.6)
         ax.grid(False)
         fig.tight_layout()
-        fig.savefig("fig/thumos/{}.pdf".format(fname))
+        Path("./fig_wl/thumos_cos").mkdir(parents=True, exist_ok=True)
+        fig.savefig("fig_wl/thumos_cos/{}_wl.pdf".format(fname), format="pdf", dpi=1200)
         plt.close('all')
         # ax.set_yticks([])

@@ -28,7 +28,8 @@ else:
     # from model import Model_detect as Model
     import options_expand as options
 
-    out_name = "./fig/fig.pdf"
+    Path('./fig_cosine').mkdir(parents=True, exist_ok=True)
+    out_name = "./fig_cosine/fig.pdf"
 
 
 def smooth(v, order=1):
@@ -97,13 +98,15 @@ if __name__ == "__main__":
 
     # if torch.cuda.device_count() > 1:
     #     model = torch.nn.DataParallel(model)
-    args.pretrained_ckpt = './ckpt/thumos/thumos_base.pkl'
+    # args.pretrained_ckpt = './ckpt/thumos/thumos_base.pkl'
     if args.pretrained_ckpt is not None:
         checkpoint = torch.load(args.pretrained_ckpt)
         if IS_ORIGINAL:
             model.load_state_dict(checkpoint)
         else:
             model.load_state_dict(checkpoint['model_state_dict'])
+    else:
+        raise SystemExit
     model.eval()
 
     total_images = len(dataset.testidx)

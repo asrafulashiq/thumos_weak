@@ -174,16 +174,16 @@ def batch_per_dis(X1, X2, w):
     X1 = X1.permute(2, 1, 0).unsqueeze(2)
     X2 = X2.permute(2, 1, 0).unsqueeze(1)
 
-    X_d = X1 - X2
-    X_diff = X_d.view(X_d.shape[0], X_d.shape[1] * X_d.shape[2], -1)
+    # X_d = X1 - X2
+    # X_diff = X_d.view(X_d.shape[0], X_d.shape[1] * X_d.shape[2], -1)
 
-    w = w.unsqueeze(-1)
-    dis_mat = torch.bmm(X_diff, w).squeeze(-1)
-    dis_mat = dis_mat.view(dis_mat.shape[0], X_d.shape[1], X_d.shape[2])
+    # w = w.unsqueeze(-1)
+    # dis_mat = torch.bmm(X_diff, w).squeeze(-1)
+    # dis_mat = dis_mat.view(dis_mat.shape[0], X_d.shape[1], X_d.shape[2])
 
-  #  dis_mat = 1 - torch.cosine_similarity(X1, X2, dim=-1)
+    dis_mat = 1 - torch.cosine_similarity(X1, X2, dim=-1)
 
-    return torch.pow(dis_mat, 2)
+    return dis_mat
 
 
 def WLOSS_orig(x, element_logits, weight, labels, seq_len, device, args, gt_all=None):
@@ -387,8 +387,8 @@ def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
 
     final_features, element_logits = model(Variable(features))
 
-    # milloss = MILL_test(element_logits, seq_len, labels, device, args)
-    milloss = MILL_all(element_logits, seq_len, labels, device, args)
+    milloss = MILL_test(element_logits, seq_len, labels, device, args)
+    # milloss = MILL_all(element_logits, seq_len, labels, device, args)
 
     weight = model.classifier.weight
     casloss = WLOSS_orig(
