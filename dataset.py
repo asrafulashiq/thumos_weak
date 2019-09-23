@@ -12,7 +12,8 @@ class Dataset:
         self.feature_size = args.feature_size
         self.path_to_features = self.dataset_name + "-I3D-JOINTFeatures.npy"
         self.path_to_annotations = self.dataset_name + "-Annotations/"
-        self.features = np.load(self.path_to_features, encoding="bytes")
+        self.features = np.load(self.path_to_features,
+                                encoding="bytes", allow_pickle=True)
         self.segments = np.load(self.path_to_annotations + "segments.npy")
         self.labels = np.load(self.path_to_annotations + "labels_all.npy")
         # Specific to Thumos14

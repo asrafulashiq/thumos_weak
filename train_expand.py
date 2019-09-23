@@ -391,16 +391,16 @@ def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
     # milloss = MILL_all(element_logits, seq_len, labels, device, args)
 
     weight = model.classifier.weight
-    casloss = WLOSS_orig(
-        final_features, element_logits, weight, labels, seq_len, device, args, None
-    )
+    # casloss = WLOSS_orig(
+    #     final_features, element_logits, weight, labels, seq_len, device, args, None
+    # )
     # casloss = CASL(
     #     final_features, element_logits, weight, labels, seq_len, device, args, None
     # )
 
     # closs = continuity_loss(element_logits, labels, seq_len, device)
 
-    total_loss = args.Lambda * milloss + (1 - args.Lambda) * casloss
+    total_loss = args.Lambda * milloss #+ (1 - args.Lambda) * casloss
 
     if torch.isnan(total_loss):
         import pdb
