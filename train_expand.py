@@ -6,7 +6,7 @@ from torch.autograd import Variable
 torch.set_default_tensor_type("torch.cuda.FloatTensor")
 
 
-def MILL(element_logits, seq_len, labels, device):
+def MILL(element_logits, seq_len, labels, device, args):
     """ element_logits should be torch tensor of dimension (B, n_element, n_class),
          k should be numpy array of dimension (B,) indicating the top k locations to average over,
          labels should be a numpy array of dimension (B, n_class) of 1 or 0
@@ -387,8 +387,8 @@ def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
 
     final_features, element_logits = model(Variable(features))
 
-    milloss = MILL_test(element_logits, seq_len, labels, device, args)
-    # milloss = MILL_all(element_logits, seq_len, labels, device, args)
+    # milloss = MILL_test(element_logits, seq_len, labels, device, args)
+    milloss = MILL(element_logits, seq_len, labels, device, args)
 
     weight = model.classifier.weight
     # casloss = WLOSS_orig(
