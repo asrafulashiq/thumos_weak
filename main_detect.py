@@ -5,7 +5,7 @@ import torch.optim as optim
 
 from model import Model_orig as Model
 import options_expand as options
-
+import numpy as np
 # from model import Model
 from test2 import test
 
@@ -39,8 +39,16 @@ if __name__ == "__main__":
     # optimizer = optim.SGD(model.parameters(), lr=args.lr,
     #                       weight_decay=0.0005)
     init_itr = 0
-    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
-        optimizer, [2000, 4000, 8000], 0.1
+    # lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
+    #     optimizer, [2000, 4000, 8000], 0.1
+    # )
+    lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        factor=0.1,
+        patience=10,
+        verbose=True,
+        threshold=0.1,
+        min_lr=1e-8,
     )
 
     # args.test = True
@@ -60,11 +68,14 @@ if __name__ == "__main__":
         raise SystemExit
 
     best_dmap_itr = (0, init_itr)
+    list_loss = []
+
     for itr in (range(init_itr, args.max_iter)):
-        train(
+        _loss = train(
             itr, dataset, args, model, optimizer, logger, device,
             scheduler=lr_scheduler
         )
+        list_loss.append(_loss)
         if itr % 100 == 0 and not itr == 0:
             if type(model) == torch.nn.DataParallel:
                 model_state = model.module.state_dict()
@@ -78,6 +89,10 @@ if __name__ == "__main__":
                 },
                 "./ckpt/thumos/" + args.model_name + ".pkl",
             )
+
+            lr_scheduler.step(np.mean(list_loss))
+            list_loss = []
+
         if itr % 300 == 0 and not itr == 0:
             if itr % 1000 == 0 and not itr == 0:
                 args.test = True

@@ -387,20 +387,20 @@ def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
 
     final_features, element_logits = model(Variable(features))
 
-    # milloss = MILL_test(element_logits, seq_len, labels, device, args)
-    milloss = MILL(element_logits, seq_len, labels, device, args)
+    milloss = MILL_test(element_logits, seq_len, labels, device, args)
+    # milloss = MILL(element_logits, seq_len, labels, device, args)
 
     weight = model.classifier.weight
-    # casloss = WLOSS_orig(
-    #     final_features, element_logits, weight, labels, seq_len, device, args, None
-    # )
+    casloss = WLOSS_orig(
+        final_features, element_logits, weight, labels, seq_len, device, args, None
+    )
     # casloss = CASL(
     #     final_features, element_logits, weight, labels, seq_len, device, args, None
     # )
 
     # closs = continuity_loss(element_logits, labels, seq_len, device)
 
-    total_loss = args.Lambda * milloss #+ (1 - args.Lambda) * casloss
+    total_loss = args.Lambda * milloss + (1 - args.Lambda) * casloss
 
     if torch.isnan(total_loss):
         import pdb
@@ -419,5 +419,4 @@ def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
     # torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
     optimizer.step()
 
-    if scheduler:
-        scheduler.step()
+    return total_loss.data.cpu().numpy()
