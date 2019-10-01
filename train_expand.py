@@ -182,8 +182,6 @@ def batch_per_dis(X1, X2, w):
 
     cc, ss, _, dim = X_d.shape
     dis_mat = torch.Tensor()
-    if cc>1:
-        print('FLAG')
     for i in range(cc):
         X_diff_T = X_d[i].reshape(-1, 1, dim)
         X_diff = X_d[i].reshape(-1, dim, 1)
