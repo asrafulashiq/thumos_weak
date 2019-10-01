@@ -29,16 +29,17 @@ class Model_orig(torch.nn.Module):
         self.dropout = nn.Dropout(0.7)
         self.apply(weights_init)
 
-        # self.weight = torch.nn.Parameter(
-        #     data = torch.eye(n_feature).unsqueeze(0).expand(
-        #         n_class, n_feature, n_feature
-        #     )
-        # )
+        self.weight = torch.nn.Parameter(
+            data = torch.eye(n_feature).unsqueeze(0).expand(
+                n_class, n_feature, n_feature
+            )
+        )
 
     def get_weight(self):
-        wt = self.classifier.weight
-        ww = torch.bmm(wt.unsqueeze(-1), wt.unsqueeze(-1).permute(0, 2, 1))
-        return ww
+        # wt = self.classifier.weight
+        # ww = torch.bmm(wt.unsqueeze(-1), wt.unsqueeze(-1).permute(0, 2, 1))
+        # return ww
+        return self.weight
 
     def forward(self, inputs, is_training=True):
 
