@@ -278,11 +278,6 @@ def train(
     itr, dataset, args, model, optimizer, logger, device, scheduler=None
 ):
 
-    # #### gt #####
-    # features = dataset.load_partial(is_random=True)
-    # features = torch.from_numpy(features).float().to(device)
-    # gt_features = model(Variable(features), is_tmp=True)
-
     features, labels = dataset.load_data(
         n_similar=args.num_similar, similar_size=args.similar_size
     )
@@ -297,7 +292,7 @@ def train(
     milloss = MILL_test(element_logits, seq_len, labels, device, args)
     # milloss = MILL(element_logits, seq_len, labels, device, args)
 
-    weight = model.classifier.weight
+    weight = model.weight
     casloss = WLOSS_orig(
         final_features,
         element_logits,
@@ -320,10 +315,9 @@ def train(
     logger.log_value("weight", torch.norm(weight), itr)
 
     logger.log_value("milloss", milloss, itr)
-    # logger.log_value("casloss", casloss, itr)
     logger.log_value("total_loss", total_loss, itr)
 
-    # print("Iteration: %d, Loss: %.3f" % (itr, total_loss.data.cpu().numpy()))
+    print("Iteration: %d, Loss: %.3f" % (itr, total_loss.data.cpu().numpy()))
 
     optimizer.zero_grad()
     total_loss.backward()

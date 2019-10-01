@@ -50,8 +50,6 @@ if __name__ == "__main__":
         min_lr=1e-8,
     )
 
-    # args.test = True
-    # args.pretrained_ckpt = './ckpt/thumos/thumos_base.pkl'
     if args.pretrained_ckpt is not None:
         checkpoint = torch.load(args.pretrained_ckpt)
         if type(model) == torch.nn.DataParallel:
