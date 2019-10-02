@@ -331,7 +331,10 @@ def train(
     logger.log_value("milloss", milloss, itr)
     logger.log_value("total_loss", total_loss, itr)
 
-    print("Iteration: %d, Loss: %.3f" % (itr, total_loss.data.cpu().numpy()))
+    def tval(x):
+        return x.data.cpu().numpy()
+
+    print("Iteration: %d, Loss: %.3f + %.3f = %.3f" % (itr, milloss, casloss, total_loss))
 
     optimizer.zero_grad()
     total_loss.backward()
