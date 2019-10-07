@@ -123,7 +123,7 @@ if __name__ == "__main__":
         # ax = axes[cnt_ax]
         cnt_ax += 1
 
-        if cnt_ax >= total_images:
+        if cnt_ax >= 10:
             break
 
         for classname in np.unique(labs):
@@ -184,7 +184,7 @@ if __name__ == "__main__":
         # ax.plot(atn, color=(0, 0, 0), alpha=0.6)
         ax.grid(False)
         fig.tight_layout()
-        Path("./fig_wl/thumos_cos").mkdir(parents=True, exist_ok=True)
-        fig.savefig("fig_wl/thumos_cos/{}_wl.pdf".format(fname), format="pdf", dpi=1200)
+        Path("./fig_wl/anet_cos").mkdir(parents=True, exist_ok=True)
+        fig.savefig("fig_wl/anet_cos/{}_wl.pdf".format(fname), format="pdf", dpi=1200)
         plt.close('all')
         # ax.set_yticks([])
