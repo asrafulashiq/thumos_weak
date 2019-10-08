@@ -33,13 +33,13 @@ def sigmoid(x, eps=1e-10):
 
 
 
-def smooth(v, order=2):
-    return v
-    # l = min(5, len(v))
-    # l = l - (1 - l % 2)
-    # if len(v) <= order:
-    #     return v
-    # return savgol_filter(v, l, order)
+def smooth(v, order=1):
+    # return v
+    l = min(20, len(v))
+    l = l - (1 - l % 2)
+    if len(v) <= order:
+        return v
+    return savgol_filter(v, l, order)
 
 def filter_segments(segment_predict, videonames, ambilist):
     ind = np.zeros(np.shape(segment_predict)[0])
@@ -71,7 +71,7 @@ class ANETdetection(object):
         annotation_path='./Thumos14reduced-Annotations',
         tiou_thresholds=np.array([0.1, 0.3, 0.5]),
         args=None,
-        subset="test",
+        subset="validation",
         verbose=False
     ):
         self.subset = subset
