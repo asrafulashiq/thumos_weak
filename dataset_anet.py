@@ -46,57 +46,57 @@ class Dataset:
             (len(self.classlist), self.num_gt,
              self.feature_size), dtype=np.float32
         )
-        self.get_gt_for_sup()
+        # self.get_gt_for_sup()
 
         self.normalize = False
         self.mode = mode
         if mode == 'rgb' or mode == 'flow':
             self.feature_size = 1024
 
-    def get_gt_for_sup(self):
-        for category in self.classlist:
-            cnt = 0
-            label = category.decode("utf-8")
-            cls_pos = utils.str2ind(label, self.classlist)
-            for idx in self.testidx:
-                if label in self._labels[idx]:
-                    lab_indices = [
-                        i for i, _l in enumerate(self._labels[idx])
-                        if _l == label
-                    ]
-                    ind = random.choice(lab_indices)
-                    s, e = self.segments[idx][ind]
-                    s, e = round(s * 25 / 16), round(e * 25 / 16)
+    # def get_gt_for_sup(self):
+    #     for category in self.classlist:
+    #         cnt = 0
+    #         label = category.decode("utf-8")
+    #         cls_pos = utils.str2ind(label, self.classlist)
+    #         for idx in self.testidx:
+    #             if label in self._labels[idx]:
+    #                 lab_indices = [
+    #                     i for i, _l in enumerate(self._labels[idx])
+    #                     if _l == label
+    #                 ]
+    #                 ind = random.choice(lab_indices)
+    #                 s, e = self.segments[idx][ind]
+    #                 s, e = round(s * 25 / 16), round(e * 25 / 16)
 
-                    tmp = self.features[idx][s: e + 1]
-                    if tmp.size == 0:
-                        continue
+    #                 tmp = self.features[idx][s: e + 1]
+    #                 if tmp.size == 0:
+    #                     continue
 
-                    self.gt_loc_ind[cls_pos][cnt] = np.mean(tmp, 0)
-                    if np.isnan(self.gt_loc_ind[cls_pos]).any():
-                        import pdb
-                        pdb.set_trace()
-                    cnt += 1
-                    if cnt >= self.num_gt:
-                        break
-            if cnt < self.num_gt:
-                import pdb
-                pdb.set_trace()
-            self.gt_loc_ind[cls_pos] = self.gt_loc_ind[cls_pos] / cnt
-        self.feat_loc = np.mean(self.gt_loc_ind, axis=1)
+    #                 self.gt_loc_ind[cls_pos][cnt] = np.mean(tmp, 0)
+    #                 if np.isnan(self.gt_loc_ind[cls_pos]).any():
+    #                     import pdb
+    #                     pdb.set_trace()
+    #                 cnt += 1
+    #                 if cnt >= self.num_gt:
+    #                     break
+    #         if cnt < self.num_gt:
+    #             import pdb
+    #             pdb.set_trace()
+    #         self.gt_loc_ind[cls_pos] = self.gt_loc_ind[cls_pos] / cnt
+    #     self.feat_loc = np.mean(self.gt_loc_ind, axis=1)
 
-    def load_partial(self, is_random=False):
-        if is_random:
-            ind = np.random.choice(
-                range(self.num_gt), size=len(self.classlist), replace=True
-            )
-            feat = self.gt_loc_ind[
-                list(range(len(self.classlist))),
-                ind
-            ]
-            return feat
-        else:
-            return self.feat_loc
+    # def load_partial(self, is_random=False):
+    #     if is_random:
+    #         ind = np.random.choice(
+    #             range(self.num_gt), size=len(self.classlist), replace=True
+    #         )
+    #         feat = self.gt_loc_ind[
+    #             list(range(len(self.classlist))),
+    #             ind
+    #         ]
+    #         return feat
+    #     else:
+    #         return self.feat_loc
 
     def train_test_idx(self):
         if self.dataset_name == "Thumos14reduced":
@@ -181,18 +181,15 @@ class Dataset:
                 feat = feat[..., self.feature_size:]
             return feat, np.array(labs), done
 
-    def load_valid(self):
-        indices = np.random.choice(self.testidx, size=self.batch_size)
-        data = np.array(
-            [utils.process_feat(self.features[i], self.t_max,
-                                self.normalize) for i in indices]
-        )
-        labels = np.array([self.labels_multihot[i] for i in indices])
-        return data, labels
 
-    def load_one_test_with_segment(self):
-        for idx in self.testidx:
-            feat = self.features[idx]
-            labs = self._labels[idx]
-            seg = self.segments[idx]
-            yield np.array(feat), np.array(labs), np.array(seg)
+if __name__ == "__main__":
+    import options_expand as options
+
+    args = options.parser.parse_args()
+
+    dat = Dataset(args)
+
+    feat, lab = dat.load_data(n_similar=4, is_training=True, similar_size=2)
+
+    print(feat.shape)
+    print(lab.shape)

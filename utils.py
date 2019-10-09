@@ -3,7 +3,8 @@ import numpy as np
 
 def str2ind(categoryname, classlist):
     return [
-        i for i in range(len(classlist))
+        i
+        for i in range(len(classlist))
         if categoryname == classlist[i].decode("utf-8")
     ][0]
 
@@ -13,8 +14,9 @@ def strlist2indlist(strlist, classlist):
 
 
 def strlist2multihot(strlist, classlist):
-    return np.sum(np.eye(len(classlist))[strlist2indlist(strlist, classlist)],
-                  axis=0)
+    return np.sum(
+        np.eye(len(classlist))[strlist2indlist(strlist, classlist)], axis=0
+    )
 
 
 def idx2multihot(id_list, num_class):
@@ -31,7 +33,7 @@ def random_extract(feat, t_max):
     # ind = sorted(ind)
     # return feat[ind]
     r = np.random.randint(len(feat) - t_max)
-    return feat[r: r + t_max]
+    return feat[r : r + t_max]
 
 
 def pad(feat, min_len):
@@ -47,17 +49,31 @@ def pad(feat, min_len):
 
 
 def fn_normalize(x):
-    return (x - np.mean(x, 0, keepdims=True)) / \
-            (np.std(x, 0, keepdims=True)+1e-10)
+    return (x - np.mean(x, 0, keepdims=True)) / (
+        np.std(x, 0, keepdims=True) + 1e-10
+    )
+
 
 def process_feat(feat, length=None, normalize=False):
-    if length is not None:
-        if len(feat) > length:
-            x = random_extract(feat, length)
-        else:
-            x = pad(feat, length)
+
+    if isinstance(feat[0], str):
+        rgb_path, flow_path = feat
+        ret = np.load(rgb_path)["feature"], np.load(flow_path)["feature"]
+        feature = np.concatenate(ret, axis=-1)
+
+        if len(feature.shape) > 2:
+            rr = np.random.choice(feature.shape[0])
+            feature = feature[rr]
     else:
-        x = feat
+        feature = feat
+
+    if length is not None:
+        if len(feature) > length:
+            x = random_extract(feature, length)
+        else:
+            x = pad(feature, length)
+    else:
+        x = feature
     if normalize:
         x = fn_normalize(x)
     return x

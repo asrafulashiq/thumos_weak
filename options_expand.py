@@ -22,7 +22,7 @@ parser.add_argument(
 parser.add_argument("--num-class", default=20,
                     help="number of classes (default: )")
 parser.add_argument(
-    "--dataset-name", default="ActivityNet1.2-mini",
+    "--dataset-name", default="ActivityNet1.3-mini",
     help="dataset to train on (default: )"
 )
 parser.add_argument(

@@ -535,15 +535,15 @@ class Dataset:
             ann = v["annotations"]
 
             for _k, val in ann.items():
-                _lab.extend([fn_cls[_k].encode("utf8")] * len(val))
+                _lab.extend([fn_cls[_k]] * len(val))
                 _segm.extend(val)
 
             rgb_feature_file = os.path.join(paths[0], "v_" + k + "-rgb.npz")
             flow_feature_file = os.path.join(paths[1], "v_" + k + "-flow.npz")
 
-            # if (not os.path.exists(rgb_feature_file)) or (not os.path.exists(flow_feature_file)):
-            #     print(f"{k} does not exist")
-            #     continue
+            if (not os.path.exists(rgb_feature_file)) or (not os.path.exists(flow_feature_file)):
+                print(f"{k} does not exist")
+                continue
 
             features.append((rgb_feature_file, flow_feature_file))
             duration.append(v["duration"])
@@ -618,10 +618,10 @@ class Dataset:
 
         for cnt, k in enumerate(dataset_dict):
             if k in dataset_dict_val:
-                subset.append(b"validation")
+                is_val = True
                 paths = [rgb_path_val, flow_path_val]
             else:
-                subset.append(b"training")
+                is_val = False
                 paths = [rgb_path_train, flow_path_train]
 
             v = dataset_dict[k]
@@ -632,17 +632,21 @@ class Dataset:
 
             for _k, val in ann.items():
                 if fn_cls[_k] in selected_classes:
-                    _lab.extend([fn_cls[_k].encode("utf8")] * len(val))
+                    _lab.extend([fn_cls[_k]] * len(val))
                     _segm.extend(val)
             if not _lab:
                 continue
             rgb_feature_file = os.path.join(paths[0], "v_" + k + "-rgb.npz")
             flow_feature_file = os.path.join(paths[1], "v_" + k + "-flow.npz")
 
-            # if (not os.path.exists(rgb_feature_file)) or (not os.path.exists(flow_feature_file)):
-            #     print(f"{k} does not exist")
-            #     continue
+            if (not os.path.exists(rgb_feature_file)) or (not os.path.exists(flow_feature_file)):
+                print(f"{k} does not exist")
+                continue
 
+            if is_val:
+                subset.append(b"validation")
+            else:
+                subset.append(b"training")
             features.append((rgb_feature_file, flow_feature_file))
             duration.append(v["duration"])
             labels.append(_lab)
@@ -656,6 +660,7 @@ class Dataset:
             np.array([i.encode("utf8") for i in list(selected_classes)]),
         )
         np.save(str(DIR / "segments.npy"), np.array(segments))
+        np.save(str(DIR / "subset.npy"), np.array(subset))
         np.save(str(DIR / "duration.npy"), np.array(duration))
         np.save(str(DIR / "labels.npy"), np.array(labels))
         np.save(str(DIR / "labels_all.npy"), np.array(labels_unique))
@@ -719,5 +724,4 @@ if __name__ == "__main__":
     args = options.parser.parse_args()
 
     dat = Dataset(args)
-
     dat.save_dat_mini()

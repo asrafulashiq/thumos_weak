@@ -10,7 +10,7 @@ import numpy as np
 from test2 import test
 
 from train_expand import train
-from dataset import Dataset
+from dataset_anet import Dataset
 from tensorboard_logger import Logger
 from tqdm import tqdm
 
@@ -38,20 +38,15 @@ if __name__ == "__main__":
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
     init_itr = 0
-    # lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
-    #     optimizer, [2000, 4000, 8000], 0.1
-    # )
     lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
         factor=0.1,
-        patience=10,
+        patience=20,
         verbose=True,
         threshold=0.1,
         min_lr=1e-8,
     )
 
-    # args.test = True
-    # args.pretrained_ckpt = './ckpt/thumos/thumos_base.pkl'
     if args.pretrained_ckpt is not None:
         checkpoint = torch.load(args.pretrained_ckpt)
         if type(model) == torch.nn.DataParallel:
