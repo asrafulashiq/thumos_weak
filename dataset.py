@@ -2,8 +2,6 @@ import numpy as np
 import utils
 import random
 
-np.random.seed(0)
-
 
 class Dataset:
     def __init__(self, args, mode='both'):
