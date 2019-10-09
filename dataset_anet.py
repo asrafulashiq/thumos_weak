@@ -165,7 +165,7 @@ class Dataset:
 
         else:
             labs = self.labels_multihot[self.testidx[self.currenttestidx]]
-            feat = self.features[self.testidx[self.currenttestidx]]
+            feat = self.load_feat(self.features[self.testidx[self.currenttestidx]])
 
             if self.currenttestidx == len(self.testidx) - 1:
                 done = True
@@ -174,13 +174,22 @@ class Dataset:
                 done = False
                 self.currenttestidx += 1
 
-            feat = np.array(feat)
-            if self.mode == 'rgb':
-                feat = feat[..., :self.feature_size]
-            elif self.mode == 'flow':
-                feat = feat[..., self.feature_size:]
+            if not isinstance(feat, np.ndarray):
+                feat = np.array(feat)
+            # if self.mode == 'rgb':
+            #     feat = feat[..., :self.feature_size]
+            # elif self.mode == 'flow':
+            #     feat = feat[..., self.feature_size:]
             return feat, np.array(labs), done
 
+    def load_feat(self, paths):
+        rgb_path, flow_path = paths
+        ret = np.load(rgb_path)["feature"], np.load(flow_path)["feature"]
+        feature = np.concatenate(ret, axis=-1)
+
+        if len(feature.shape) > 2:
+            feature = feature[0]
+        return feature
 
 if __name__ == "__main__":
     import options_expand as options

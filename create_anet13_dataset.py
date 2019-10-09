@@ -552,7 +552,8 @@ class Dataset:
             segments.append(_segm)
             videonames.append(k)
 
-        np.save(str(DIR / "videoname.npy"), np.array(videonames))
+        np.save(str(DIR / "videoname.npy"), 
+            np.array([i.encode('utf8') for i in videonames]))
         np.save(
             str(DIR / "classlist.npy"),
             np.array([i.encode("utf8") for i in list(cls_list.keys())]),
@@ -654,7 +655,8 @@ class Dataset:
             segments.append(_segm)
             videonames.append(k)
 
-        np.save(str(DIR / "videoname.npy"), np.array(videonames))
+        np.save(str(DIR / "videoname.npy"), 
+            np.array([i.encode('utf8') for i in videonames]))
         np.save(
             str(DIR / "classlist.npy"),
             np.array([i.encode("utf8") for i in list(selected_classes)]),
@@ -722,6 +724,8 @@ if __name__ == "__main__":
     import options_expand as options
 
     args = options.parser.parse_args()
+    np.random.seed(args.seed)
 
     dat = Dataset(args)
     dat.save_dat_mini()
+    # dat.save_dat()
