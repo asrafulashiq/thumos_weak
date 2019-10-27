@@ -14,14 +14,14 @@ class Dataset:
         self.path_to_annotations = self.dataset_name + "-Annotations/"
         self.features = np.load(self.path_to_features,
                                 encoding="bytes", allow_pickle=True)
-        self.segments = np.load(self.path_to_annotations + "segments.npy")
-        self.labels = np.load(self.path_to_annotations + "labels_all.npy")
+        self.segments = np.load(self.path_to_annotations + "segments.npy", allow_pickle=True)
+        self.labels = np.load(self.path_to_annotations + "labels_all.npy", allow_pickle=True)
         # Specific to Thumos14
 
-        self._labels = np.load(self.path_to_annotations + "labels.npy")
-        self.classlist = np.load(self.path_to_annotations + "classlist.npy")
-        self.subset = np.load(self.path_to_annotations + "subset.npy")
-        self.videonames = np.load(self.path_to_annotations + "videoname.npy")
+        self._labels = np.load(self.path_to_annotations + "labels.npy", allow_pickle=True)
+        self.classlist = np.load(self.path_to_annotations + "classlist.npy", allow_pickle=True)
+        self.subset = np.load(self.path_to_annotations + "subset.npy", allow_pickle=True)
+        self.videonames = np.load(self.path_to_annotations + "videoname.npy", allow_pickle=True)
         self.batch_size = args.batch_size
         # self.batch_size = args.num_similar * args.similar_size
         self.t_max = args.max_seqlen

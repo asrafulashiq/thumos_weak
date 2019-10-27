@@ -86,15 +86,15 @@ class ANETdetection(object):
         #####
 
     def _import_ground_truth(self, annotation_path):
-        gtsegments = np.load(annotation_path + "/segments.npy")
-        gtlabels = np.load(annotation_path + "/labels.npy")
-        videoname = np.load(annotation_path + "/videoname.npy")
+        gtsegments = np.load(annotation_path + "/segments.npy", allow_pickle=True)
+        gtlabels = np.load(annotation_path + "/labels.npy", allow_pickle=True)
+        videoname = np.load(annotation_path + "/videoname.npy", allow_pickle=True)
         videoname = np.array([i.decode("utf8") for i in videoname])
-        subset = np.load(annotation_path + "/subset.npy")
+        subset = np.load(annotation_path + "/subset.npy", allow_pickle=True)
         subset = np.array([s.decode("utf-8") for s in subset])
-        classlist = np.load(annotation_path + "/classlist.npy")
+        classlist = np.load(annotation_path + "/classlist.npy", allow_pickle=True)
         classlist = np.array([c.decode("utf-8") for c in classlist])
-        duration = np.load(annotation_path + "/duration.npy")
+        duration = np.load(annotation_path + "/duration.npy", allow_pickle=True)
         ambilist = annotation_path + "/Ambiguous_test.txt"
 
         try:

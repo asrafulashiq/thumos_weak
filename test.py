@@ -4,7 +4,7 @@ import utils
 import numpy as np
 from torch.autograd import Variable
 from classificationMAP import getClassificationMAP as cmAP
-from detectionMAP2 import getDetectionMAP as dmAP
+from detectionMAP import getDetectionMAP as dmAP
 import scipy.io as sio
 from sklearn.metrics import accuracy_score
 
@@ -55,8 +55,6 @@ def test(itr, dataset, args, model, logger, device):
     instance_logits_stack = np.array(instance_logits_stack)
     labels_stack = np.array(labels_stack)
 
-    # dmap, iou = dmAP(element_logits_stack, dataset.path_to_annotations, args)
-
     iou = [0.1, 0.3, 0.5, 0.7]
 
     dmap_detect = ANETdetection(dataset.path_to_annotations, iou, args=args)
@@ -75,8 +73,8 @@ def test(itr, dataset, args, model, logger, device):
     for k in range(len(iou)):
         print("Detection map @ %f = %f" % (iou[k], dmap[k]*100))
 
-    logger.log_value("Test Classification mAP", cmap, itr)
+    logger.add_scalar("Test Classification mAP", cmap, itr)
     for item in list(zip(dmap, iou)):
-        logger.log_value("Test Detection mAP @ IoU = " + str(item[1]), item[0], itr)
+        logger.add_scalar("Test Detection mAP @ IoU = " + str(item[1]), item[0], itr)
 
     # utils.write_to_file(args.dataset_name, dmap, cmap, itr)
