@@ -177,6 +177,73 @@ class ANETdetection(object):
         return pred, c_s
 
 
+    def _import_prediction_bmn(self, predictions, len_stack):
+        pred = []
+        _len = []
+        for i, p in enumerate(predictions):
+            if i in self.idx_to_take:
+                pred.append(p)
+                _len.append(len_stack[i])
+        predictions = pred
+        len_stack = _len
+
+        args = self.args
+        segment_predict = []
+
+        for c in self.templabelidx:
+            for i in range(len(predictions)):
+                tmp = predictions[i][c, ...]
+
+                if tmp.shape[0] < len_stack[i]:
+                    mul = len_stack[i] / tmp.shape[0]
+                else:
+                    mul = 1.
+
+                if args is None:
+                    thres = 0.5
+                else:
+                    thres = args.thres
+
+                tmp_max = np.max(tmp, -1)
+                end_max = np.argmax(tmp, -1)
+
+                ind_start = np.where(tmp_max > thres)[0]
+                ind_end = end_max[ind_start]
+                conf_filtered = tmp_max[ind_start]
+
+                for kk in range(len(conf_filtered)):
+                    s = ind_start[kk] * mul
+                    e = ind_end[kk] * mul
+                    # if e - s >= 2:
+                    segment_predict.append(
+                        [i, s, e, conf_filtered[kk], c]
+                    )
+
+        segment_predict = np.array(segment_predict)
+        segment_predict = filter_segments(segment_predict, self.videoname, self.ambilist)
+
+        # Read predictions.
+        video_lst, t_start_lst, t_end_lst = [], [], []
+        label_lst, score_lst = [], []
+
+        for i in range(np.shape(segment_predict)[0]):
+            video_lst.append(self.videoname[int(segment_predict[i, 0])])
+            t_start_lst.append(segment_predict[i, 1])
+            t_end_lst.append(segment_predict[i, 2])
+            score_lst.append(segment_predict[i, 3])
+            label_lst.append(segment_predict[i, 4])
+        prediction = pd.DataFrame(
+            {
+                "video-id": video_lst,
+                "t-start": t_start_lst,
+                "t-end": t_end_lst,
+                "label": label_lst,
+                "score": score_lst,
+            }
+        )
+        self.prediction = prediction
+
+
     def _import_prediction(self, predictions):
         pred = []
         for i, p in enumerate(predictions):

@@ -3,12 +3,12 @@ import os
 import torch
 import torch.optim as optim
 
-from model import Model_orig as Model
+from model import Custom_BMN 
 import options
 
 # from model import Model
-from test import test
-from train import train
+from test import test_bmn
+from train import train_bmn
 from dataset import Dataset
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
@@ -27,10 +27,11 @@ if __name__ == "__main__":
         os.makedirs("./logs/" + args.model_name)
     logger = SummaryWriter("./logs/" + args.model_name)
 
-    model = Model(dataset.feature_size, dataset.num_class)
+    model = Custom_BMN(args)
 
-    # if torch.cuda.device_count() > 1:
-    #     model = torch.nn.DataParallel(model)
+    if torch.cuda.device_count() > 1:
+        model = torch.nn.DataParallel(model)
+
     model = model.to(device)
 
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
@@ -41,7 +42,7 @@ if __name__ == "__main__":
     )
 
     if args.pretrained_ckpt is not None:
-        checkpoint = torch.load(args.pretrained_ck5pt)
+        checkpoint = torch.load(args.pretrained_ckpt)
         if type(model) == torch.nn.DataParallel:
             model.module.load_state_dict(checkpoint["model_state_dict"])
         else:
@@ -50,12 +51,12 @@ if __name__ == "__main__":
             optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
     if args.test:
-        test(init_itr, dataset, args, model, logger, device)
+        test_bmn(init_itr, dataset, args, model, logger, device)
         raise SystemExit
 
     best_dmap_itr = (0, init_itr)
     for itr in (range(init_itr, args.max_iter)):
-        train(
+        train_bmn(
             itr, dataset, args, model, optimizer, logger, device,
             scheduler=lr_scheduler
         )
@@ -75,7 +76,7 @@ if __name__ == "__main__":
             if itr % 500 == 0:
                 args.test = True
             print("Iter: {}".format(itr))
-            dmap = test(itr, dataset, args, model, logger, device)
+            dmap = test_bmn(itr, dataset, args, model, logger, device)
             args.test = False
 
     print("\n\n")

@@ -3,7 +3,8 @@ import numpy as np
 
 def str2ind(categoryname, classlist):
     return [
-        i for i in range(len(classlist))
+        i
+        for i in range(len(classlist))
         if categoryname == classlist[i].decode("utf-8")
     ][0]
 
@@ -13,8 +14,9 @@ def strlist2indlist(strlist, classlist):
 
 
 def strlist2multihot(strlist, classlist):
-    return np.sum(np.eye(len(classlist))[strlist2indlist(strlist, classlist)],
-                  axis=0)
+    return np.sum(
+        np.eye(len(classlist))[strlist2indlist(strlist, classlist)], axis=0
+    )
 
 
 def idx2multihot(id_list, num_class):
@@ -22,16 +24,36 @@ def idx2multihot(id_list, num_class):
 
 
 def random_extract(feat, t_max):
-    # ind = np.arange(feat.shape[0])
-    # splits = np.array_split(ind, t_max)
-    # nind = np.array([np.random.choice(split, 1)[0] for split in splits])
-    # return feat[nind]
+    if feat.shape[0] > t_max:
+        ind = np.arange(feat.shape[0])
+        splits = np.array_split(ind, t_max)
+        nind = np.array([np.random.choice(split, 1)[0] for split in splits])
+        return feat[nind]
+    else:
+        ind = np.random.choice(feat.shape[0], size=t_max)
+        ind = sorted(ind)
+        return feat[ind]
 
-    # ind = np.random.choice(feat.shape[0], size=t_max)
-    # ind = sorted(ind)
-    # return feat[ind]
-    r = np.random.randint(len(feat) - t_max)
-    return feat[r: r + t_max]
+        # r = np.random.randint(len(feat) - t_max)
+        # return feat[r: r + t_max]
+
+
+def len_extract(feat, t_max):
+    if feat.shape[0] > t_max:
+        ind = np.arange(feat.shape[0])
+        splits = np.array_split(ind, t_max)
+        nind = np.array([np.random.choice(split, 1)[0] for split in splits])
+        return feat[nind], ("rand", feat.shape[0])
+    elif feat.shape[0] < t_max:
+        _feat = np.pad(
+            feat,
+            ((0, t_max - feat.shape[0]), (0, 0)),
+            mode="constant",
+            constant_values=0,
+        )
+        return _feat, ("pad", feat.shape[0])
+    else:
+        return feat, None
 
 
 def pad(feat, min_len):
@@ -47,8 +69,10 @@ def pad(feat, min_len):
 
 
 def fn_normalize(x):
-    return (x - np.mean(x, 0, keepdims=True)) / \
-            (np.std(x, 0, keepdims=True)+1e-10)
+    return (x - np.mean(x, 0, keepdims=True)) / (
+        np.std(x, 0, keepdims=True) + 1e-10
+    )
+
 
 def process_feat(feat, length=None, normalize=False):
     if length is not None:

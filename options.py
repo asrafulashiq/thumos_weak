@@ -7,10 +7,10 @@ parser.add_argument(
 parser.add_argument(
     "--batch-size",
     type=int,
-    default=20,
+    default=10,
     help="number of instances in a batch of data (default: 10)",
 )
-parser.add_argument("--model-name", "-m", default="weakloc",
+parser.add_argument("--model-name", "-m", default="BMN",
                     help="name to save model")
 parser.add_argument(
     "--pretrained-ckpt", "--ckpt", default=None,
@@ -27,7 +27,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--max-seqlen",
-    default=300,
+    default=100,
     type=int,
     help="maximum sequence length during training (default: 750)",
 )
@@ -56,20 +56,22 @@ parser.add_argument(
 
 parser.add_argument("--dis", type=float, default=3, help="distance thres")
 
+parser.add_argument("--num-sample", type=float, default=28)
+
 parser.add_argument("--test", action='store_true')
 
-parser.add_argument("--similar-size", type=int, default=4,
+parser.add_argument("--similar-size", type=int, default=2,
                     help="how many instances of similar type will be there")
 parser.add_argument(
     "--num-similar",
-    default=5,
+    default=2,
     type=int,
     help="number of similar pairs in a batch of data  (default: 3)",
 )
 
 parser.add_argument("--beta1", type=float, default=1)
 parser.add_argument("--beta2", type=float, default=1)
-parser.add_argument("--thres", type=float, default=0.5)
+parser.add_argument("--thres", type=float, default=0.3)
 parser.add_argument("--clip", type=float, default=4)
 parser.add_argument("--topk", type=float, default=60)
 parser.add_argument("--topk2", type=float, default=10)

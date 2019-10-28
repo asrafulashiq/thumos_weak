@@ -38,16 +38,18 @@ class Model_orig(torch.nn.Module):
 
 
 class Custom_BMN(nn.Module):
-    def __init__(self):
+    def __init__(self, args):
         super().__init__()
-        self.tscale = 100
-        self.prop_boundary_ratio = 0.25
-        self.num_sample = 28
+        self.tscale = args.max_seqlen
+        self.prop_boundary_ratio = 0
+        self.num_sample = args.num_sample
         self.num_sample_perbin = 1
-        self.feat_dim = 2048
+        self.feat_dim = args.feature_size
 
         self.hidden_dim_1d = 512
         self.hidden_dim_2d = 512
+        
+        self.n_class = args.num_class
 
         self._get_interp1d_mask()
 
@@ -83,11 +85,12 @@ class Custom_BMN(nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv2d(3 * self.hidden_dim_2d, self.hidden_dim_2d, kernel_size=1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(self.hidden_dim_2d, 1, kernel_size=1),
-            nn.Sigmoid(),
+            nn.Conv2d(self.hidden_dim_2d, self.n_class+1, kernel_size=1),
+            nn.Softmax2d()
         )
 
     def forward(self, x):
+        x = x.permute(0, 2, 1)  # B, C, T
         x_feature = self.x_1d_b(x) # --> B, C, T
 
         # consists of x_start, x_mid, x_end
@@ -97,13 +100,17 @@ class Custom_BMN(nn.Module):
         # B, 3 * C, T, T --> B, 3 * C, T, T
         x_pp = self.x_2d_p(x_p)
 
-        confidence_map = self.x_f_p(x_pp)  # --> B, 1, T, T
+        confidence_map = self.x_f_p(x_pp)  # --> B, cls+1, T, T
+        
+        # start < end, minimum length 1
+        confidence_map = torch.triu(confidence_map, diagonal=1)
+
         return confidence_map, x_pp
 
     def _boundary_matching_layer(self, x):
         input_size = x.size()  # B, C, T
         
-        # (B, C, T) x (B, T, N, T, T) --> B, C, N, T, T
+        # (B, C, T) x (T, N x T x T) --> B, C, N , T , T
         out = torch.matmul(x, self.sample_mask).reshape(
             input_size[0], input_size[1], self.num_sample, self.tscale, self.tscale
         )
@@ -169,6 +176,7 @@ class Custom_BMN(nn.Module):
             mask_mat.append(mask_mat_vector)
         mask_mat = np.stack(mask_mat, axis=3)
         mask_mat = mask_mat.astype(np.float32)
+        mask_mat = mask_mat.transpose(0, 1, 3, 2)
         self.sample_mask = nn.Parameter(
             torch.Tensor(mask_mat).view(self.tscale, -1), requires_grad=False
         )
