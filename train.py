@@ -89,15 +89,15 @@ def metric_function_sim_class(X1, X2):
     # X1, X2: N_sim, N_sim, C
 
     dis_mat_s = 1 - torch.cosine_similarity(
-        X1_expand[..., : C // 3], X2_expand[..., : C // 3], dim=-1
+        X1_expand[..., : C // 4], X2_expand[..., : C // 4], dim=-1
     )
     dis_mat_m = 1 - torch.cosine_similarity(
-        X1_expand[..., C // 3 : -C // 3],
-        X2_expand[..., C // 3 : -C // 3],
+        X1_expand[..., C // 4 : -C // 4],
+        X2_expand[..., C // 4 : -C // 4],
         dim=-1,
     )
     dis_mat_e = 1 - torch.cosine_similarity(
-        X1_expand[..., -C // 3 :], X2_expand[..., -C // 3 :], dim=-1
+        X1_expand[..., -C // 4 :], X2_expand[..., -C // 4 :], dim=-1
     )
     dis_mat = (dis_mat_e + dis_mat_s + dis_mat_m) / 3
     return dis_mat  # --> N_sim, N_sim, 1
@@ -136,8 +136,8 @@ def metric_function(X1, X2):
     mask = mask.permute(2, 3, 0, 1).triu(diagonal=1).permute(2, 3, 0, 1)
     # --> B1, B2, Nc1, Nc2
 
-    mask_same = mask * torch.ones(Nc1, Nc2)[None, None, ...] > 0
-    mask_diff = mask * torch.ones(Nc1, Nc2).triu(diagonal=1) > 0
+    mask_same = (mask * torch.eye(Nc1)[None, None, ...]) > 0
+    mask_diff = (mask * torch.ones(Nc1, Nc2).triu(diagonal=1)) > 0
 
     dis_similar = torch.mean(
         torch.masked_select(dis_mat, mask_same.to(dis_mat.device))
@@ -151,7 +151,7 @@ def metric_function(X1, X2):
 
 def Sim_Loss(conf_map, x_feat, labels, device, args):
     pass
-    # conf_map: (B, cls+1, T, T)
+    # conf_map: (B, cls, T, T)
     # x_feat: (B, 3*C, T, T)
 
     eps = 1e-8
@@ -174,7 +174,7 @@ def Sim_Loss(conf_map, x_feat, labels, device, args):
     dis_sim, dis_dissim = metric_function(x_avg_feat, x_avg_feat)
 
     loss = torch.sum(torch.max(
-        dis_sim - dis_dissim + args.dis, torch.FloatTensor([0.0]).to(device)
+        dis_sim - dis_dissim + args.dis, torch.tensor(0.0).to(device)
     ))
     return loss
 

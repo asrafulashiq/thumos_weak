@@ -56,7 +56,7 @@ parser.add_argument(
 
 parser.add_argument("--dis", type=float, default=0.5, help="distance thres")
 
-parser.add_argument("--num-sample", type=float, default=28)
+parser.add_argument("--num-sample", type=float, default=16)
 
 parser.add_argument("--test", action='store_true')
 

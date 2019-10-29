@@ -14,10 +14,6 @@ from utils_eval import get_blocked_videos
 from utils_eval import interpolated_prec_rec
 from utils_eval import segment_iou
 
-import warnings
-
-# warnings.filterwarnings("ignore", message="numpy.dtype size changed")
-# warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
 
 def str2ind(categoryname, classlist):
     return [i for i in range(len(classlist)) if categoryname == classlist[i]][0]
@@ -152,7 +148,6 @@ class ANETdetection(object):
 
     def get_topk_mean(self, x, k, axis=0):
         return np.mean(np.sort(x, axis=axis)[-int(k):, :], axis=0)
-
 
     def _get_vid_score(self, pred):
         # pred : (n, class)

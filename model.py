@@ -48,7 +48,7 @@ class Custom_BMN(nn.Module):
 
         self.hidden_dim_1d = 512
         self.hidden_dim_2d = 512
-        
+
         self.n_class = args.num_class
 
         self._get_interp1d_mask()
@@ -56,14 +56,15 @@ class Custom_BMN(nn.Module):
         # Base Module
         self.x_1d_b = nn.Sequential(
             nn.Conv1d(
-                self.feat_dim, 2 * self.hidden_dim_1d, kernel_size=3, padding=1, groups=2
+                self.feat_dim,
+                2 * self.hidden_dim_1d,
+                kernel_size=3,
+                padding=1,
+                groups=2,
             ),
             nn.ReLU(inplace=True),
             nn.Conv1d(
-                2 * self.hidden_dim_1d,
-                self.hidden_dim_1d,
-                kernel_size=3,
-                padding=1
+                2 * self.hidden_dim_1d, self.hidden_dim_1d, kernel_size=3, padding=1
             ),
             nn.ReLU(inplace=True),
         )
@@ -74,34 +75,46 @@ class Custom_BMN(nn.Module):
                 3 * self.hidden_dim_1d,
                 3 * self.hidden_dim_2d,
                 kernel_size=(1, 1),
-                groups=3
+                groups=3,
             ),
             nn.ReLU(inplace=True),
         )
         self.x_f_p = nn.Sequential(
-            nn.Conv2d(3 * self.hidden_dim_2d, 3 * self.hidden_dim_2d, kernel_size=3, padding=1, groups=3),
+            nn.Conv2d(
+                3 * self.hidden_dim_2d,
+                3 * self.hidden_dim_2d,
+                kernel_size=3,
+                padding=1,
+                groups=3,
+            ),
             nn.ReLU(inplace=True),
-            nn.Conv2d(3 * self.hidden_dim_2d, 3 * self.hidden_dim_2d, kernel_size=3, padding=1, groups=3),
+            nn.Conv2d(
+                3 * self.hidden_dim_2d,
+                3 * self.hidden_dim_2d,
+                kernel_size=3,
+                padding=1,
+                groups=3,
+            ),
             nn.ReLU(inplace=True),
             nn.Conv2d(3 * self.hidden_dim_2d, self.hidden_dim_2d, kernel_size=1),
             nn.ReLU(inplace=True),
             nn.Conv2d(self.hidden_dim_2d, self.n_class, kernel_size=1),
-            nn.Sigmoid()
+            nn.Sigmoid(),
         )
 
     def forward(self, x):
         x = x.permute(0, 2, 1)  # B, C, T
-        x_feature = self.x_1d_b(x) # --> B, C, T
+        x_feature = self.x_1d_b(x)  # --> B, C, T
 
         # consists of x_start, x_mid, x_end
         # --> B, 3*C, T, T
         x_p = self._boundary_matching_layer(x_feature)
-        
+
         # B, 3 * C, T, T --> B, 3 * C, T, T
         x_pp = self.x_2d_p(x_p)
 
         confidence_map = self.x_f_p(x_pp)  # --> B, cls+1, T, T
-        
+
         # start < end, minimum length 1
         confidence_map = torch.triu(confidence_map, diagonal=1)
 
@@ -109,18 +122,20 @@ class Custom_BMN(nn.Module):
 
     def _boundary_matching_layer(self, x):
         input_size = x.size()  # B, C, T
-        
+
         # (B, C, T) x (T, N x T x T) --> B, C, N , T , T
         out = torch.matmul(x, self.sample_mask).reshape(
             input_size[0], input_size[1], self.num_sample, self.tscale, self.tscale
         )
 
-        out_start = torch.mean(out[:, :, :self.num_sample // 4], dim=2)
-        out_mid = torch.mean(out[:, :, self.num_sample // 4: -self.num_sample // 4], dim=2)
-        out_end = torch.mean(out[:, :, -self.num_sample // 4 : ], dim=2)
+        out_start = torch.mean(out[:, :, : self.num_sample // 4], dim=2)
+        out_mid = torch.mean(
+            out[:, :, self.num_sample // 4 : -self.num_sample // 4], dim=2
+        )
+        out_end = torch.mean(out[:, :, -self.num_sample // 4 :], dim=2)
         # each dim: B, C, T, T
 
-        out = torch.cat((out_start, out_mid, out_end), dim=1) # B, 3*C, T, T
+        out = torch.cat((out_start, out_mid, out_end), dim=1)  # B, 3*C, T, T
         return out
 
     def _get_interp1d_bin_mask(
@@ -180,7 +195,6 @@ class Custom_BMN(nn.Module):
         self.sample_mask = nn.Parameter(
             torch.Tensor(mask_mat).view(self.tscale, -1), requires_grad=False
         )
-
 
 
 class BMN(nn.Module):
@@ -337,6 +351,7 @@ class BMN(nn.Module):
         self.sample_mask = nn.Parameter(
             torch.Tensor(mask_mat).view(self.tscale, -1), requires_grad=False
         )
+
 
 if __name__ == "__main__":
     mod = Custom_BMN()
