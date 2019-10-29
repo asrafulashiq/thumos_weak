@@ -148,7 +148,7 @@ if __name__ == "__main__":
             def softmin(x):
                 x = x - np.min(x)
                 return np.exp(-x)/np.sum(np.exp(-x))
-
+ 
             #logit = np.clip(logit, a_max=4, a_min=-4)
             #logit = softmax(logit)
             logit = (logit - np.min(logit))/(np.max(logit)-np.min(logit)+1e-10)

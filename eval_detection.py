@@ -208,6 +208,22 @@ class ANETdetection(object):
                 ind_end = end_max[ind_start]
                 conf_filtered = tmp_max[ind_start]
 
+                if len(conf_filtered) > 0:
+                    _strt = []
+                    _end = []
+                    _conf = []
+                    for each in np.unique(ind_end):
+                        tmp_end = ind_end[ind_end==each]
+                        tmp_strt = ind_start[ind_end==each]
+                        tmp_conf = conf_filtered[ind_end==each]
+                        _ii = np.argmax(tmp_conf)
+                        _strt.append(tmp_strt[_ii])
+                        _end.append(tmp_end[_ii])
+                        _conf.append(tmp_conf[_ii])
+                    ind_start = _strt
+                    ind_end = _end
+                    conf_filtered = _conf
+
                 for kk in range(len(conf_filtered)):
                     s = ind_start[kk] * mul
                     e = ind_end[kk] * mul
