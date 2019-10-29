@@ -56,20 +56,18 @@ def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
         scheduler.step()
 
 
-def MIL_BMN(conf_map, seq_len, labels, device):
+def MIL_BMN(conf_map, attention_map, seq_len, labels, device):
     eps = 1e-8
     B, C, *_ = conf_map.shape
-    conf_reduced = conf_map.reshape(B, C, -1).max(dim=-1)[0]
 
-    milloss = -torch.sum(labels * torch.log(conf_reduced + eps)) / (
-        labels.sum() + eps
-    ) - torch.sum((1 - labels) * torch.log(1 - conf_reduced + eps)) / (
-        (1 - labels).sum() + eps
-    )
+    conf_map = torch.softmax(conf_map, dim=1)
+    conf_map_atn = torch.triu(attention_map * conf_map, diagonal=1)
+    conf_reduced = conf_map_atn.reshape(B, C, -1).max(dim=-1)[0]
+
+    milloss = - torch.sum(labels * torch.log(conf_reduced + eps))
 
     if torch.isnan(milloss):
         import pdb
-
         pdb.set_trace()
 
     return milloss
@@ -138,7 +136,7 @@ def metric_function(X1, X2, labels):
     return dis_similar, dis_dissimilar
 
 
-def Sim_Loss(conf_map, x_feat, labels, device, args):
+def Sim_Loss(conf_map, attention_map, x_feat, labels, device, args):
     pass
     # conf_map: (B, cls, T, T)
     # x_feat: (B, 3*C, T, T)
@@ -147,12 +145,16 @@ def Sim_Loss(conf_map, x_feat, labels, device, args):
     B, N_c, *_ = conf_map.shape
     _, C, *_ = x_feat.shape
 
-    Conf = conf_map.reshape(B, N_c, -1)
+    conf_map_1 = torch.triu(torch.softmax(conf_map, dim=-2), diagonal=1)
+    conf_map_2 = torch.triu(torch.softmax(conf_map, dim=-1), diagonal=1)
+    conf_map_mul = conf_map_1 * conf_map_2 * attention_map
+
+    Conf = conf_map_mul.reshape(B, N_c, -1)
     x_feat = x_feat.reshape(B, C, -1)
 
     x_avg_feat = (Conf.unsqueeze(2) * x_feat.unsqueeze(1)).sum(-1) / (
         Conf.unsqueeze(2).sum(dim=-1) + eps
-    )  # --> B, N_c, C
+    )  # B, N_c, 1, -1 x B, 1, C, -1 --> B, N_c, C
 
     dis_sim, dis_dissim = metric_function(x_avg_feat, x_avg_feat, labels)
 
@@ -183,18 +185,17 @@ def train_bmn(itr, dataset, args, model, optimizer, logger, device):
     features = torch.from_numpy(features).float().to(device)
     labels = torch.from_numpy(labels).float().to(device)
 
-    conf_map, x_feat = model(features)
+    conf_map, attention_map, x_feat = model(features)
     # --> (B, cls, T, T), (C, 3*C, T, T)
 
-    milloss = MIL_BMN(conf_map, seq_len, labels, device)
-    metric_loss = Sim_Loss(conf_map, x_feat, labels, device, args)
+    milloss = MIL_BMN(conf_map, attention_map, seq_len, labels, device)
+    metric_loss = 0 #Sim_Loss(conf_map, attention_map, x_feat, labels, device, args)
 
-    L1loss = torch.sum(conf_map) / (
-        conf_map.shape[0]
-        * conf_map.shape[1]
-        * conf_map.shape[-1]
-        * (conf_map.shape[-1] - 1)
-        / 2
+    L1loss = torch.sum(attention_map) / (
+        attention_map.shape[0]
+        * attention_map.shape[1]
+        * attention_map.shape[2]
+        * attention_map.shape[3]
     )
 
     total_loss = milloss + args.gamma * metric_loss + args.gamma2 * L1loss

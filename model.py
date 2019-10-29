@@ -73,9 +73,19 @@ class Custom_BMN(nn.Module):
         )
 
         self.conv_conf = nn.Sequential(
-            nn.Conv2d(3 * self.hidden_dim_2d, 3 * self.n_class, kernel_size=1, groups=3),
+            nn.Conv2d(3 * self.hidden_dim_2d, self.n_class, kernel_size=1)
+        )
+
+        self.conv_conf = nn.Sequential(
+            nn.Conv2d(3 * self.hidden_dim_2d, self.n_class, kernel_size=1)
+        )
+
+        self.conv_attn = nn.Sequential(
+            nn.Conv2d(3 * self.hidden_dim_2d, 1, kernel_size=1),
             nn.Sigmoid()
         )
+
+        self.apply(weights_init)
 
     def forward(self, x):
         x = x.permute(0, 2, 1)  # B, C, T
@@ -88,15 +98,11 @@ class Custom_BMN(nn.Module):
         # B, 3 * C, T, T --> B, 3 * C, T, T
         x_pp = self.conv_2d_p(x_p)
 
-        confidence_map = self.conv_conf(x_pp)  # --> B, 3 * cls, T, T
-        B, _cls, T, T = confidence_map.shape
-        confidence_map = confidence_map.view(B, 3, _cls//3, T, T).mean(dim=1)
-        # --> B, cls, T, T
+        confidence_map = self.conv_conf(x_pp)  # --> B, cls, T, T
 
-        # start < end, minimum length 1
-        confidence_map = torch.triu(confidence_map, diagonal=1)
+        attention_map = self.conv_attn(x_pp)
 
-        return confidence_map, x_pp
+        return confidence_map, attention_map, x_pp
 
     def _boundary_matching_layer(self, x):
         input_size = x.size()  # B, C, T

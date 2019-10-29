@@ -107,20 +107,24 @@ def test_bmn(itr, dataset, args, model, logger, device):
         features_in = torch.from_numpy(features_in).float().to(device)
         features_in = features_in.unsqueeze(0)
 
-        conf_map, _ = model(features_in)
+        conf_map, attention_map, _ = model(features_in)
 
         if flag is not None:
             if flag[0] == "pad":
                 _seq = flag[1]
                 conf_map = conf_map[:, :, :_seq, :_seq]
+                attention_map = attention_map[:, :, :_seq, :_seq]
 
-        conf_reduced = conf_map.reshape(args.num_class, -1).max(dim=-1)[0]
+        conf_map_soft = torch.softmax(conf_map, dim=1)
+        conf_map_atn = torch.triu(attention_map * conf_map_soft, diagonal=1)
+        conf_reduced = conf_map_atn.reshape(args.num_class, -1).max(dim=-1)[0]
+
         tmp = conf_reduced.data.cpu().numpy()
         instance_logits_stack.append(tmp)
         labels_stack.append(labels)
 
         conf_reshaped = (
-            conf_map
+            conf_map_atn
             .squeeze()
             .data.cpu()
             .numpy()
