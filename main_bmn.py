@@ -2,6 +2,7 @@ from __future__ import print_function
 import os
 import torch
 import torch.optim as optim
+import numpy as np
 
 from model import Custom_BMN 
 import options
@@ -31,14 +32,14 @@ if __name__ == "__main__":
 
     if torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
-
     model = model.to(device)
 
-    optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    model_params = filter(lambda x: x.requires_grad, model.parameters())
+    optimizer = optim.Adam(model_params, lr=args.lr)
 
     init_itr = 1
-    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
-        optimizer, [3000, 5000, 10000], 0.5
+    lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, patience=10, factor=0.1, verbose=True, min_lr=1e-8
     )
 
     if args.pretrained_ckpt is not None:
@@ -55,11 +56,12 @@ if __name__ == "__main__":
         raise SystemExit
 
     best_dmap_itr = (0, init_itr)
+    list_loss = []
     for itr in (range(init_itr, args.max_iter)):
-        train_bmn(
-            itr, dataset, args, model, optimizer, logger, device,
-            scheduler=lr_scheduler
+        _loss = train_bmn(
+            itr, dataset, args, model, optimizer, logger, device
         )
+        list_loss.append(_loss)
         if itr % 100 == 0:
             if type(model) == torch.nn.DataParallel:
                 model_state = model.module.state_dict()
@@ -72,6 +74,10 @@ if __name__ == "__main__":
                 },
                 "./ckpt/base/" + args.model_name + ".pkl",
             )
+
+            lr_scheduler.step(np.mean(_loss))
+            list_loss = []
+
         if itr % 100 == 0:
             if itr % 500 == 0:
                 args.test = True

@@ -14,24 +14,18 @@ def MILL(element_logits, seq_len, labels, device):
     labels = labels / torch.sum(labels, dim=1, keepdim=True)
     instance_logits = torch.zeros(0).to(device)
     for i in range(element_logits.shape[0]):
-        tmp, _ = torch.topk(
-            element_logits[i][: seq_len[i]], k=int(k[i]), dim=0
-        )
+        tmp, _ = torch.topk(element_logits[i][: seq_len[i]], k=int(k[i]), dim=0)
         instance_logits = torch.cat(
             [instance_logits, torch.mean(tmp, 0, keepdim=True)], dim=0
         )
     milloss = -torch.mean(
-        torch.sum(
-            Variable(labels) * F.log_softmax(instance_logits, dim=1), dim=1
-        ),
+        torch.sum(Variable(labels) * F.log_softmax(instance_logits, dim=1), dim=1),
         dim=0,
     )
     return milloss
 
 
-def train(
-    itr, dataset, args, model, optimizer, logger, device, scheduler=None
-):
+def train(itr, dataset, args, model, optimizer, logger, device, scheduler=None):
 
     features, labels = dataset.load_data(
         n_similar=args.num_similar, similar_size=args.similar_size
@@ -92,9 +86,7 @@ def metric_function_sim_class(X1, X2):
         X1_expand[..., : C // 4], X2_expand[..., : C // 4], dim=-1
     )
     dis_mat_m = 1 - torch.cosine_similarity(
-        X1_expand[..., C // 4 : -C // 4],
-        X2_expand[..., C // 4 : -C // 4],
-        dim=-1,
+        X1_expand[..., C // 4 : -C // 4], X2_expand[..., C // 4 : -C // 4], dim=-1
     )
     dis_mat_e = 1 - torch.cosine_similarity(
         X1_expand[..., -C // 4 :], X2_expand[..., -C // 4 :], dim=-1
@@ -103,7 +95,7 @@ def metric_function_sim_class(X1, X2):
     return dis_mat  # --> N_sim, N_sim, 1
 
 
-def metric_function(X1, X2):
+def metric_function(X1, X2, labels):
 
     # X1: B1, Nc1, C
     # X2: B2, Nc2, C
@@ -118,30 +110,27 @@ def metric_function(X1, X2):
 
     # dis : B1, B2, Nc1, Nc2
     dis_mat_s = 1 - torch.cosine_similarity(
-        X1_expand[..., : C // 3], X2_expand[..., : C // 3], dim=-1
+        X1_expand[..., : C // 4], X2_expand[..., : C // 4], dim=-1
     )
     dis_mat_m = 1 - torch.cosine_similarity(
-        X1_expand[..., C // 3 : -C // 3],
-        X2_expand[..., C // 3 : -C // 3],
-        dim=-1,
+        X1_expand[..., C // 4 : -C // 4], X2_expand[..., C // 4 : -C // 4], dim=-1
     )
     dis_mat_e = 1 - torch.cosine_similarity(
-        X1_expand[..., -C // 3 :], X2_expand[..., -C // 3 :], dim=-1
+        X1_expand[..., -C // 4 :], X2_expand[..., -C // 4 :], dim=-1
     )
     dis_mat = (dis_mat_e + dis_mat_s + dis_mat_m) / 3
 
-    # similar: B1, B2, i, i
-
+    # mask
     mask = torch.ones(dis_mat.shape)
     mask = mask.permute(2, 3, 0, 1).triu(diagonal=1).permute(2, 3, 0, 1)
+    mask_lab = labels.view(B1, 1, Nc1, 1) * labels.view(1, B2, 1, Nc2)
+    mask = mask * mask_lab
     # --> B1, B2, Nc1, Nc2
 
     mask_same = (mask * torch.eye(Nc1)[None, None, ...]) > 0
     mask_diff = (mask * torch.ones(Nc1, Nc2).triu(diagonal=1)) > 0
 
-    dis_similar = torch.mean(
-        torch.masked_select(dis_mat, mask_same.to(dis_mat.device))
-    )
+    dis_similar = torch.mean(torch.masked_select(dis_mat, mask_same.to(dis_mat.device)))
     dis_dissimilar = torch.mean(
         torch.masked_select(dis_mat, mask_diff.to(dis_mat.device))
     )
@@ -165,17 +154,11 @@ def Sim_Loss(conf_map, x_feat, labels, device, args):
         Conf.unsqueeze(2).sum(dim=-1) + eps
     )  # --> B, N_c, C
 
-    # x_avg_feat_neg = ((1 - Conf).unsqueeze(2) * x_feat.unsqueeze(1)).sum(
-    #     -1
-    # ) / (
-    #     (1 - Conf).unsqueeze(2).sum(dim=-1) + eps
-    # )  # --> B, N_c, C
+    dis_sim, dis_dissim = metric_function(x_avg_feat, x_avg_feat, labels)
 
-    dis_sim, dis_dissim = metric_function(x_avg_feat, x_avg_feat)
-
-    loss = torch.sum(torch.max(
-        dis_sim - dis_dissim + args.dis, torch.tensor(0.0).to(device)
-    ))
+    loss = torch.sum(
+        torch.max(dis_sim - dis_dissim + args.dis, torch.tensor(0.0).to(device))
+    )
     return loss
 
 
@@ -189,9 +172,7 @@ def t_val(x):
             return x.data.numpy()
 
 
-def train_bmn(
-    itr, dataset, args, model, optimizer, logger, device, scheduler=None
-):
+def train_bmn(itr, dataset, args, model, optimizer, logger, device):
     model.train()
     features, labels = dataset.load_data(
         n_similar=args.num_similar, similar_size=args.similar_size
@@ -208,14 +189,23 @@ def train_bmn(
     milloss = MIL_BMN(conf_map, seq_len, labels, device)
     metric_loss = Sim_Loss(conf_map, x_feat, labels, device, args)
 
-    total_loss = milloss + args.gamma * metric_loss
+    L1loss = torch.sum(conf_map) / (
+        conf_map.shape[0]
+        * conf_map.shape[1]
+        * conf_map.shape[-1]
+        * (conf_map.shape[-1] - 1)
+        / 2
+    )
+
+    total_loss = milloss + args.gamma * metric_loss + args.gamma2 * L1loss
 
     logger.add_scalar("milloss", milloss, itr)
     logger.add_scalar("total_loss", total_loss, itr)
 
     # print("Iteration: %d, Loss: %.6f" % (itr, total_loss.data.cpu().numpy()))
     print(
-        f"Iteration: {itr:>10d} -  {t_val(milloss): .6f} + {t_val(metric_loss):.4f}"
+        f"Iteration: {itr:>10d} -  {t_val(milloss): .6f} + {t_val(metric_loss):.4f} "
+        + f"+ {t_val(L1loss):.4f}"
     )
 
     optimizer.zero_grad()

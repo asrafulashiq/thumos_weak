@@ -54,23 +54,14 @@ class Custom_BMN(nn.Module):
         self._get_interp1d_mask()
 
         # Base Module
-        self.x_1d_b = nn.Sequential(
-            nn.Conv1d(
-                self.feat_dim,
-                2 * self.hidden_dim_1d,
-                kernel_size=3,
-                padding=1,
-                groups=2,
-            ),
+        self.conv_1d_b = nn.Sequential(
+            nn.Conv1d(self.feat_dim, self.hidden_dim_1d, kernel_size=1),
             nn.ReLU(inplace=True),
-            nn.Conv1d(
-                2 * self.hidden_dim_1d, self.hidden_dim_1d, kernel_size=3, padding=1
-            ),
-            nn.ReLU(inplace=True),
+            nn.Dropout(0.5),
         )
 
         # Proposal Evaluation Module
-        self.x_2d_p = nn.Sequential(
+        self.conv_2d_p = nn.Sequential(
             nn.Conv2d(
                 3 * self.hidden_dim_1d,
                 3 * self.hidden_dim_2d,
@@ -78,42 +69,29 @@ class Custom_BMN(nn.Module):
                 groups=3,
             ),
             nn.ReLU(inplace=True),
+            nn.Dropout(0.6),
         )
-        self.x_f_p = nn.Sequential(
-            nn.Conv2d(
-                3 * self.hidden_dim_2d,
-                3 * self.hidden_dim_2d,
-                kernel_size=3,
-                padding=1,
-                groups=3,
-            ),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(
-                3 * self.hidden_dim_2d,
-                3 * self.hidden_dim_2d,
-                kernel_size=3,
-                padding=1,
-                groups=3,
-            ),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(3 * self.hidden_dim_2d, self.hidden_dim_2d, kernel_size=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(self.hidden_dim_2d, self.n_class, kernel_size=1),
-            nn.Sigmoid(),
+
+        self.conv_conf = nn.Sequential(
+            nn.Conv2d(3 * self.hidden_dim_2d, 3 * self.n_class, kernel_size=1, groups=3),
+            nn.Sigmoid()
         )
 
     def forward(self, x):
         x = x.permute(0, 2, 1)  # B, C, T
-        x_feature = self.x_1d_b(x)  # --> B, C, T
+        x_feature = self.conv_1d_b(x)  # --> B, C, T
 
         # consists of x_start, x_mid, x_end
         # --> B, 3*C, T, T
         x_p = self._boundary_matching_layer(x_feature)
 
         # B, 3 * C, T, T --> B, 3 * C, T, T
-        x_pp = self.x_2d_p(x_p)
+        x_pp = self.conv_2d_p(x_p)
 
-        confidence_map = self.x_f_p(x_pp)  # --> B, cls+1, T, T
+        confidence_map = self.conv_conf(x_pp)  # --> B, 3 * cls, T, T
+        B, _cls, T, T = confidence_map.shape
+        confidence_map = confidence_map.view(B, 3, _cls//3, T, T).mean(dim=1)
+        # --> B, cls, T, T
 
         # start < end, minimum length 1
         confidence_map = torch.triu(confidence_map, diagonal=1)

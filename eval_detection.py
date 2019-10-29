@@ -27,6 +27,8 @@ def strlist2indlist(strlist, classlist):
 def sigmoid(x, eps=1e-10):
     return 1/(1+np.exp(-x) + eps)
 
+def softmax(x, axis=-1, wt=1):
+    xm = x.max()
 
 
 def smooth(v, order=2):
@@ -211,7 +213,7 @@ class ANETdetection(object):
                     e = ind_end[kk] * mul
                     # if e - s >= 2:
                     segment_predict.append(
-                        [i, s, e, conf_filtered[kk], c]
+                        [i, round(s), round(e), conf_filtered[kk], int(c)]
                     )
 
         segment_predict = np.array(segment_predict)
@@ -237,7 +239,6 @@ class ANETdetection(object):
             }
         )
         self.prediction = prediction
-
 
     def _import_prediction(self, predictions):
         pred = []

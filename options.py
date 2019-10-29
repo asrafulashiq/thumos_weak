@@ -27,7 +27,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--max-seqlen",
-    default=100,
+    default=60,
     type=int,
     help="maximum sequence length during training (default: 750)",
 )
@@ -64,15 +64,16 @@ parser.add_argument("--similar-size", type=int, default=2,
                     help="how many instances of similar type will be there")
 parser.add_argument(
     "--num-similar",
-    default=2,
+    default=5,
     type=int,
     help="number of similar pairs in a batch of data  (default: 3)",
 )
 parser.add_argument("--gamma", type=float, default=1)
+parser.add_argument("--gamma2", type=float, default=0.5)
 
 parser.add_argument("--beta1", type=float, default=1)
 parser.add_argument("--beta2", type=float, default=1)
-parser.add_argument("--thres", type=float, default=0.3)
+parser.add_argument("--thres", type=float, default=0.5)
 parser.add_argument("--clip", type=float, default=4)
 parser.add_argument("--topk", type=float, default=60)
 parser.add_argument("--topk2", type=float, default=10)
