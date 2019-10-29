@@ -85,8 +85,8 @@ class Custom_BMN(nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv2d(3 * self.hidden_dim_2d, self.hidden_dim_2d, kernel_size=1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(self.hidden_dim_2d, self.n_class+1, kernel_size=1),
-            nn.Softmax2d()
+            nn.Conv2d(self.hidden_dim_2d, self.n_class, kernel_size=1),
+            nn.Sigmoid()
         )
 
     def forward(self, x):

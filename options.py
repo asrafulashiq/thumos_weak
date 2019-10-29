@@ -54,7 +54,7 @@ parser.add_argument(
     help="maximum iteration to train (default: 50000)",
 )
 
-parser.add_argument("--dis", type=float, default=3, help="distance thres")
+parser.add_argument("--dis", type=float, default=0.5, help="distance thres")
 
 parser.add_argument("--num-sample", type=float, default=28)
 
@@ -68,6 +68,7 @@ parser.add_argument(
     type=int,
     help="number of similar pairs in a batch of data  (default: 3)",
 )
+parser.add_argument("--gamma", type=float, default=1)
 
 parser.add_argument("--beta1", type=float, default=1)
 parser.add_argument("--beta2", type=float, default=1)

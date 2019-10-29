@@ -114,8 +114,8 @@ def test_bmn(itr, dataset, args, model, logger, device):
                 _seq = flag[1]
                 conf_map = conf_map[:, :, :_seq, :_seq]
 
-        conf_reduced = conf_map.reshape(args.num_class + 1, -1).max(dim=-1)[0]
-        tmp = conf_reduced[:-1].data.cpu().numpy()
+        conf_reduced = conf_map.reshape(args.num_class, -1).max(dim=-1)[0]
+        tmp = conf_reduced.data.cpu().numpy()
         instance_logits_stack.append(tmp)
         labels_stack.append(labels)
 

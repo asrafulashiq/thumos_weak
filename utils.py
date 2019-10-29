@@ -27,8 +27,10 @@ def random_extract(feat, t_max):
     if feat.shape[0] > t_max:
         ind = np.arange(feat.shape[0])
         splits = np.array_split(ind, t_max)
-        nind = np.array([np.random.choice(split, 1)[0] for split in splits])
-        return feat[nind]
+        # nind = np.array([np.random.choice(split, 1)[0] for split in splits])
+        # return feat[nind]
+        _feat = np.stack([np.mean(feat[split], axis=0) for split in splits], axis=0)
+        return _feat
     else:
         ind = np.random.choice(feat.shape[0], size=t_max)
         ind = sorted(ind)
