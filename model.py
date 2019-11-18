@@ -80,10 +80,10 @@ class Custom_BMN(nn.Module):
             nn.Conv2d(3 * self.hidden_dim_2d, self.n_class, kernel_size=1)
         )
 
-        self.conv_attn = nn.Sequential(
-            nn.Conv2d(3 * self.hidden_dim_2d, 1, kernel_size=1),
-            nn.Sigmoid()
-        )
+        # self.conv_attn = nn.Sequential(
+        #     nn.Conv2d(3 * self.hidden_dim_2d, 1, kernel_size=1),
+        #     nn.Sigmoid()
+        # )
 
         self.apply(weights_init)
 
@@ -100,9 +100,9 @@ class Custom_BMN(nn.Module):
 
         confidence_map = self.conv_conf(x_pp)  # --> B, cls, T, T
 
-        attention_map = self.conv_attn(x_pp)
+        # attention_map = self.conv_attn(x_pp)
 
-        return confidence_map, attention_map, x_pp
+        return confidence_map, x_pp
 
     def _boundary_matching_layer(self, x):
         input_size = x.size()  # B, C, T

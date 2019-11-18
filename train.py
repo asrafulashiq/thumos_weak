@@ -29,46 +29,14 @@ def MILL(element_logits, seq_len, labels, device):
     return milloss
 
 
-def train(
-    itr, dataset, args, model, optimizer, logger, device, scheduler=None
-):
 
-    features, labels = dataset.load_data(
-        n_similar=args.num_similar, similar_size=args.similar_size
-    )
-    seq_len = np.sum(np.max(np.abs(features), axis=2) > 0, axis=1)
-    features = features[:, : np.max(seq_len), :]
-
-    features = torch.from_numpy(features).float().to(device)
-    labels = torch.from_numpy(labels).float().to(device)
-
-    final_features, element_logits = model(features)
-
-    milloss = MILL(element_logits, seq_len, labels, device)
-
-    total_loss = milloss  # + (1 - args.Lambda) * casloss
-
-    logger.add_scalar("milloss", milloss, itr)
-    # logger.log_value("casloss", casloss, itr)
-    logger.add_scalar("total_loss", total_loss, itr)
-
-    print("Iteration: %d, Loss: %.3f" % (itr, total_loss.data.cpu().numpy()))
-
-    optimizer.zero_grad()
-    total_loss.backward()
-    optimizer.step()
-
-    if scheduler:
-        scheduler.step()
-
-
-def MIL_BMN(conf_map, attention_map, seq_len, labels, device, args):
+def MIL_BMN(conf_map, seq_len, labels, device, args):
 
     B, C, *_ = conf_map.shape  # B, Class, T, T
 
     conf_map_1 = torch.triu(torch.softmax(args.beta1 * conf_map, dim=-2), diagonal=1)
     conf_map_2 = torch.triu(torch.softmax(args.beta1 * conf_map, dim=-1), diagonal=1)
-    conf_map_mul = conf_map_1 * conf_map_2 * attention_map
+    conf_map_mul = conf_map_1 * conf_map_2
     conf_map_mul = conf_map_mul.view(B, C, -1)
 
     conf_map_reduced = (conf_map.view(B, C, -1) * conf_map_mul).sum(-1) / (
@@ -270,31 +238,31 @@ def train_bmn(itr, dataset, args, model, optimizer, logger, device):
     features = torch.from_numpy(features).float().to(device)
     labels = torch.from_numpy(labels).float().to(device)
 
-    conf_map, attention_map, x_feat = model(features)
+    conf_map, x_feat = model(features)
     # --> (B, cls, T, T), (C, 3*C, T, T)
 
-    milloss = MIL_BMN(conf_map, attention_map, seq_len, labels, device, args)
-    metric_loss = metric_loss_function(
-        conf_map, attention_map, x_feat, labels, device, args
-    )
+    milloss = MIL_BMN(conf_map, seq_len, labels, device, args)
+    # metric_loss = metric_loss_function(
+    #     conf_map, attention_map, x_feat, labels, device, args
+    # )
 
-    L1loss = torch.sum(attention_map) / (
-        attention_map.shape[0]
-        * attention_map.shape[1]
-        * attention_map.shape[2]
-        * attention_map.shape[3]
-    )
+    # L1loss = torch.sum(attention_map) / (
+    #     attention_map.shape[0]
+    #     * attention_map.shape[1]
+    #     * attention_map.shape[2]
+    #     * attention_map.shape[3]
+    # )
 
-    total_loss = milloss + args.gamma * metric_loss + args.gamma2 * L1loss
+    total_loss = milloss  #+ args.gamma * metric_loss + args.gamma2 * L1loss
 
     logger.add_scalar("milloss", milloss, itr)
     logger.add_scalar("total_loss", total_loss, itr)
 
-    # print("Iteration: %d, Loss: %.6f" % (itr, total_loss.data.cpu().numpy()))
-    print(
-        f"Iteration: {itr:>10d} -  {t_val(milloss): .6f} + {t_val(metric_loss):.4f} "
-        + f"+ {t_val(L1loss):.4f}"
-    )
+    print("Iteration: %d, Loss: %.6f" % (itr, total_loss.data.cpu().numpy()))
+    # print(
+    #     f"Iteration: {itr:>10d} -  {t_val(milloss): .6f} + {t_val(metric_loss):.4f} "
+    #     + f"+ {t_val(L1loss):.4f}"
+    # )
 
     optimizer.zero_grad()
     total_loss.backward()

@@ -147,9 +147,9 @@ def test_bmn(itr, dataset, args, model, logger, device):
 
     iou = [0.1, 0.3, 0.5, 0.7]
 
-    dmap_detect = ANETdetection(dataset.path_to_annotations, iou, args=args)
-    dmap_detect._import_prediction_bmn(element_logits_stack, len_stack)
-    dmap = dmap_detect.evaluate()
+    # dmap_detect = ANETdetection(dataset.path_to_annotations, iou, args=args)
+    # dmap_detect._import_prediction_bmn(element_logits_stack, len_stack)
+    # dmap = dmap_detect.evaluate()
 
     if args.dataset_name == "Thumos14":
         test_set = sio.loadmat("test_set_meta.mat")["test_videos"][0]
@@ -159,11 +159,12 @@ def test_bmn(itr, dataset, args, model, logger, device):
 
     cmap = cmAP(instance_logits_stack, labels_stack)
     print("Classification map %f" % cmap)
-    for k in range(len(iou)):
-        print("Detection map @ %f = %f" % (iou[k], dmap[k] * 100))
 
-    logger.add_scalar("Test Classification mAP", cmap, itr)
-    for item in list(zip(dmap, iou)):
-        logger.add_scalar(
-            "Test Detection mAP @ IoU = " + str(item[1]), item[0], itr
-        )
+    # for k in range(len(iou)):
+    #     print("Detection map @ %f = %f" % (iou[k], dmap[k] * 100))
+
+    # logger.add_scalar("Test Classification mAP", cmap, itr)
+    # for item in list(zip(dmap, iou)):
+    #     logger.add_scalar(
+    #         "Test Detection mAP @ IoU = " + str(item[1]), item[0], itr
+    #     )
