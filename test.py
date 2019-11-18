@@ -115,20 +115,29 @@ def test_bmn(itr, dataset, args, model, logger, device):
                 conf_map = conf_map[:, :, :_seq, :_seq]
                 attention_map = attention_map[:, :, :_seq, :_seq]
 
-        conf_map_soft = torch.softmax(conf_map, dim=1)
-        conf_map_atn = torch.triu(attention_map * conf_map_soft, diagonal=1)
-        conf_reduced = conf_map_atn.reshape(args.num_class, -1).max(dim=-1)[0]
+        # conf_map_soft = torch.softmax(conf_map, dim=1)
+        # conf_map_atn = torch.triu(attention_map * conf_map_soft, diagonal=1)
+        # conf_reduced = conf_map_atn.reshape(args.num_class, -1).max(dim=-1)[0]
 
-        tmp = conf_reduced.data.cpu().numpy()
+        conf_map_1 = torch.triu(torch.softmax(args.beta1 * conf_map, dim=-2), diagonal=1)
+        conf_map_2 = torch.triu(torch.softmax(args.beta1 * conf_map, dim=-1), diagonal=1)
+        conf_map_mul_ = conf_map_1 * conf_map_2 * attention_map
+        conf_map_mul = conf_map_mul_.reshape(*conf_map_mul_.shape[:2], -1)
+
+        conf_reduced = (
+            conf_map.reshape(*conf_map_mul.shape[:2], -1) * conf_map_mul
+        ).sum(-1) / (conf_map_mul.sum(-1))
+
+        tmp = conf_reduced.squeeze().data.cpu().numpy()
         instance_logits_stack.append(tmp)
         labels_stack.append(labels)
 
-        conf_reshaped = (
-            conf_map_atn
-            .squeeze()
-            .data.cpu()
-            .numpy()
+        conf_map_mul_ = conf_map_mul_ / (
+            conf_map_mul_.reshape(conf_map_mul_.shape[0], -1)
+            .max(-1)[0]
+            .reshape(conf_map_mul_.shape[0], 1, 1, 1)
         )
+        conf_reshaped = conf_map_mul_.squeeze().data.cpu().numpy()
 
         element_logits_stack.append(conf_reshaped)
         len_stack.append(features.shape[0])
@@ -141,7 +150,6 @@ def test_bmn(itr, dataset, args, model, logger, device):
     dmap_detect = ANETdetection(dataset.path_to_annotations, iou, args=args)
     dmap_detect._import_prediction_bmn(element_logits_stack, len_stack)
     dmap = dmap_detect.evaluate()
-    dmap_detect.save_info("info.pkl")
 
     if args.dataset_name == "Thumos14":
         test_set = sio.loadmat("test_set_meta.mat")["test_videos"][0]

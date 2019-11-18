@@ -124,7 +124,7 @@ class Dataset:
             # Load similar pairs
             if n_similar != 0:
                 rand_classid = np.random.choice(
-                    len(self.classwiseidx), size=n_similar)
+                    len(self.classwiseidx), size=n_similar, replace=False)
                 for rid in rand_classid:
                     rand_sampleid = np.random.choice(
                         len(self.classwiseidx[rid]),
