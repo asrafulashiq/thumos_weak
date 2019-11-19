@@ -48,8 +48,6 @@ if __name__ == "__main__":
             model.module.load_state_dict(checkpoint["model_state_dict"])
         else:
             model.load_state_dict(checkpoint["model_state_dict"])
-        if "optimizer_state_dict" in checkpoint:
-            optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
     if args.test:
         test_bmn(init_itr, dataset, args, model, logger, device)
