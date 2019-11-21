@@ -301,7 +301,7 @@ class ANETdetection(object):
                 for j in range(len(s)):
                     if e[j] - s[j] >= 2:
                         segment_predict.append(
-                            [i, s[j], e[j], np.max(tmp[s[j] : e[j]]) + 0.7 * c_score[i][c],
+                            [i, s[j], e[j], np.max(tmp[s[j] : e[j]]) + 0.0 * c_score[i][c],
                             c]
                         )
         segment_predict = np.array(segment_predict)

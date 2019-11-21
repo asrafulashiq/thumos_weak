@@ -51,13 +51,13 @@ class Custom_BMN(nn.Module):
 
         self.n_class = args.num_class
 
-        # self._get_interp1d_mask()
+        self._get_interp1d_mask()
 
         # Base Module
         self.conv_1d_b = nn.Sequential(
-            nn.Conv1d(self.feat_dim, self.hidden_dim_1d, kernel_size=1),
+            nn.Conv1d(self.feat_dim, self.hidden_dim_1d, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
-            nn.Dropout(0.5),
+            nn.Dropout2d(0.5),
         )
 
         # classification module
@@ -181,9 +181,7 @@ class Custom_BMN(nn.Module):
         mask_mat = np.stack(mask_mat, axis=3)
         mask_mat = mask_mat.astype(np.float32)
         mask_mat = mask_mat.transpose(0, 1, 3, 2)
-        self.sample_mask = nn.Parameter(
-            torch.Tensor(mask_mat).view(self.tscale, -1), requires_grad=False
-        )
+        self.sample_mask = torch.Tensor(mask_mat).view(self.tscale, -1)
 
 
 class BMN(nn.Module):
