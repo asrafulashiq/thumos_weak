@@ -51,7 +51,7 @@ class Custom_BMN(nn.Module):
 
         self.n_class = args.num_class
 
-        self._get_interp1d_mask()
+        # self._get_interp1d_mask()
 
         # Base Module
         self.conv_1d_b = nn.Sequential(
@@ -60,25 +60,29 @@ class Custom_BMN(nn.Module):
             nn.Dropout(0.5),
         )
 
+        # classification module
+        self.conv_class = nn.Conv1d(self.hidden_dim_1d, self.n_class, 1, bias=False)
+
+
         # Proposal Evaluation Module
-        self.conv_2d_p = nn.Sequential(
-            nn.Conv2d(
-                3 * self.hidden_dim_1d,
-                3 * self.hidden_dim_2d,
-                kernel_size=(1, 1),
-                groups=3,
-            ),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.6),
-        )
+        # self.conv_2d_p = nn.Sequential(
+        #     nn.Conv2d(
+        #         3 * self.hidden_dim_1d,
+        #         3 * self.hidden_dim_2d,
+        #         kernel_size=(1, 1),
+        #         groups=3,
+        #     ),
+        #     nn.ReLU(inplace=True),
+        #     nn.Dropout(0.6),
+        # )
 
-        self.conv_conf = nn.Sequential(
-            nn.Conv2d(3 * self.hidden_dim_2d, self.n_class, kernel_size=1)
-        )
+        # self.conv_conf = nn.Sequential(
+        #     nn.Conv2d(3 * self.hidden_dim_2d, self.n_class, kernel_size=1)
+        # )
 
-        self.conv_conf = nn.Sequential(
-            nn.Conv2d(3 * self.hidden_dim_2d, self.n_class, kernel_size=1)
-        )
+        # self.conv_conf = nn.Sequential(
+        #     nn.Conv2d(3 * self.hidden_dim_2d, self.n_class, kernel_size=1)
+        # )
 
         # self.conv_attn = nn.Sequential(
         #     nn.Conv2d(3 * self.hidden_dim_2d, 1, kernel_size=1),
@@ -93,16 +97,17 @@ class Custom_BMN(nn.Module):
 
         # consists of x_start, x_mid, x_end
         # --> B, 3*C, T, T
-        x_p = self._boundary_matching_layer(x_feature)
+        # x_p = self._boundary_matching_layer(x_feature)
 
-        # B, 3 * C, T, T --> B, 3 * C, T, T
-        x_pp = self.conv_2d_p(x_p)
+        # # B, 3 * C, T, T --> B, 3 * C, T, T
+        # x_pp = self.conv_2d_p(x_p)
 
-        confidence_map = self.conv_conf(x_pp)  # --> B, cls, T, T
+        # confidence_map = self.conv_conf(x_pp)  # --> B, cls, T, T
 
-        # attention_map = self.conv_attn(x_pp)
+        # # attention_map = self.conv_attn(x_pp)
+        y_class = self.conv_class(x_feature)  # --> B, cls, T
 
-        return confidence_map, x_pp
+        return y_class, None, None
 
     def _boundary_matching_layer(self, x):
         input_size = x.size()  # B, C, T

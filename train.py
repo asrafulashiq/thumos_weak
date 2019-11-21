@@ -22,7 +22,7 @@ def MILL(element_logits, seq_len, labels, device):
         )
     milloss = -torch.mean(
         torch.sum(
-            Variable(labels) * F.log_softmax(instance_logits, dim=1), dim=1
+            labels * F.log_softmax(instance_logits, dim=1), dim=1
         ),
         dim=0,
     )
@@ -256,10 +256,11 @@ def train_bmn(itr, dataset, args, model, optimizer, logger, device):
     features = torch.from_numpy(features).float().to(device)
     labels = torch.from_numpy(labels).float().to(device)
 
-    conf_map, x_feat = model(features)
-    # --> (B, cls, T, T), (C, 3*C, T, T)
+    cls_logit, conf_map, x_feat = model(features)
+    # --> (B, cls, T), (B, cls, T, T), (C, 3*C, T, T)
 
-    milloss = MIL_BMN(conf_map, seq_len, labels, device, args)
+    milloss = MILL(cls_logit.permute(0, 2, 1), seq_len, labels, device)
+    # milloss = MIL_BMN(conf_map, seq_len, labels, device, args)
     # metric_loss = metric_loss_function(
     #     conf_map, attention_map, x_feat, labels, device, args
     # )
@@ -273,10 +274,10 @@ def train_bmn(itr, dataset, args, model, optimizer, logger, device):
 
     total_loss = milloss  #+ args.gamma * metric_loss + args.gamma2 * L1loss
 
-    logger.add_scalar("milloss", milloss, itr)
-    logger.add_scalar("total_loss", total_loss, itr)
+    # logger.add_scalar("milloss", milloss, itr)
+    # logger.add_scalar("total_loss", total_loss, itr)
 
-    print("Iteration: %d, Loss: %.6f" % (itr, total_loss.data.cpu().numpy()))
+    print("Iteration: %d, Loss: %.4f" % (itr, total_loss.data.cpu().numpy()))
     # print(
     #     f"Iteration: {itr:>10d} -  {t_val(milloss): .6f} + {t_val(metric_loss):.4f} "
     #     + f"+ {t_val(L1loss):.4f}"

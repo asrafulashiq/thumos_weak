@@ -8,7 +8,7 @@ from model import Custom_BMN
 import options
 
 # from model import Model
-from test import test_bmn
+from test import test_bmn, test
 from train import train_bmn
 from dataset import Dataset
 from tensorboardX import SummaryWriter
@@ -45,9 +45,9 @@ if __name__ == "__main__":
     if args.pretrained_ckpt is not None:
         checkpoint = torch.load(args.pretrained_ckpt)
         if type(model) == torch.nn.DataParallel:
-            model.module.load_state_dict(checkpoint["model_state_dict"])
+            model.module.load_state_dict(checkpoint["model_state_dict"], strict=False)
         else:
-            model.load_state_dict(checkpoint["model_state_dict"])
+            model.load_state_dict(checkpoint["model_state_dict"], strict=False)
 
     if args.test:
         test_bmn(init_itr, dataset, args, model, logger, device)
@@ -80,7 +80,7 @@ if __name__ == "__main__":
             if itr % 500 == 0:
                 args.test = True
             print("Iter: {}".format(itr))
-            dmap = test_bmn(itr, dataset, args, model, logger, device)
+            dmap = test(itr, dataset, args, model, logger, device)
             args.test = False
 
     print("\n\n")

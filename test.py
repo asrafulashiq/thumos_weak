@@ -31,7 +31,9 @@ def test(itr, dataset, args, model, logger, device):
 
         with torch.no_grad():
             features = features.unsqueeze(0)
-            _, element_logits = model(Variable(features), is_training=False)
+            # _, element_logits = model(Variable(features), is_training=False)
+            element_logits, *_ = model(features)
+            element_logits = element_logits.permute(0, 2, 1)
             element_logits = element_logits.squeeze(0)
         tmp = (
             F.softmax(
