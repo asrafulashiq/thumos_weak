@@ -63,6 +63,9 @@ class Custom_BMN(nn.Module):
         # classification module
         self.conv_class = nn.Conv1d(self.hidden_dim_1d, self.n_class, 1, bias=False)
 
+        # attention module
+        self.conv_atn = nn.Conv1d(self.hidden_dim_1d, 1, 3, padding=1)
+
 
         # Proposal Evaluation Module
         # self.conv_2d_p = nn.Sequential(
@@ -93,6 +96,7 @@ class Custom_BMN(nn.Module):
 
     def forward(self, x):
         x = x.permute(0, 2, 1)  # B, C, T
+        B, C, T = x.shape
         x_feature = self.conv_1d_b(x)  # --> B, C, T
 
         # consists of x_start, x_mid, x_end
@@ -106,8 +110,24 @@ class Custom_BMN(nn.Module):
 
         # # attention_map = self.conv_attn(x_pp)
         y_class = self.conv_class(x_feature)  # --> B, cls, T
+        y_atn = self.conv_atn(x_feature)  # --> B, 1, T
 
-        return y_class, None, None
+        # bmn class --> B, 3*cls, T, T
+        bmn_class = self._boundary_matching_layer(y_class)
+        bmn_class = (
+            bmn_class[:, :self.n_class] + 
+            bmn_class[:, self.n_class: -self.n_class] +
+            bmn_class[:, -self.n_class:]
+        )  # --> B, cls, T, T
+
+        # --> B, C, 1
+        x_fg = (torch.sigmoid(y_atn) * x_feature).sum(-1, keepdim=True) / (
+            torch.sigmoid(y_atn).sum(-1, keepdim=True) + 1e-8
+        )
+
+        y_fg = self.conv_class(x_fg)  # --> B, cls, 1
+
+        return y_class, y_fg, bmn_class
 
     def _boundary_matching_layer(self, x):
         input_size = x.size()  # B, C, T

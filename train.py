@@ -5,11 +5,6 @@ from torch.autograd import Variable
 
 
 def MILL(element_logits, seq_len, labels, device):
-    """ element_logits should be torch tensor of dimension (B, n_element, n_class),
-         k should be numpy array of dimension (B,) indicating the top k locations to average over,
-         labels should be a numpy array of dimension (B, n_class) of 1 or 0
-         return is a torch tensor of dimension (B, n_class) """
-
     k = np.ceil(seq_len / 8).astype("int32")
     labels = labels / torch.sum(labels, dim=1, keepdim=True)
     instance_logits = torch.zeros(0).to(device)
@@ -20,6 +15,17 @@ def MILL(element_logits, seq_len, labels, device):
         instance_logits = torch.cat(
             [instance_logits, torch.mean(tmp, 0, keepdim=True)], dim=0
         )
+    milloss = -torch.mean(
+        torch.sum(
+            labels * F.log_softmax(instance_logits, dim=1), dim=1
+        ),
+        dim=0,
+    )
+    return milloss
+
+def MILL_atn(instance_logits, seq_len, labels, device):
+    labels = labels / torch.sum(labels, dim=1, keepdim=True)
+
     milloss = -torch.mean(
         torch.sum(
             labels * F.log_softmax(instance_logits, dim=1), dim=1
@@ -256,10 +262,10 @@ def train_bmn(itr, dataset, args, model, optimizer, logger, device):
     features = torch.from_numpy(features).float().to(device)
     labels = torch.from_numpy(labels).float().to(device)
 
-    cls_logit, conf_map, x_feat = model(features)
+    cls_logit, cls_fg, x_feat = model(features)
     # --> (B, cls, T), (B, cls, T, T), (C, 3*C, T, T)
-
-    milloss = MILL(cls_logit.permute(0, 2, 1), seq_len, labels, device)
+    milloss = MILL_atn(cls_fg.squeeze(-1), seq_len, labels, device)
+    # milloss = MILL(cls_logit.permute(0, 2, 1), seq_len, labels, device)
     # milloss = MIL_BMN(conf_map, seq_len, labels, device, args)
     # metric_loss = metric_loss_function(
     #     conf_map, attention_map, x_feat, labels, device, args
