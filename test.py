@@ -7,6 +7,7 @@ from classificationMAP import getClassificationMAP as cmAP
 from detectionMAP import getDetectionMAP as dmAP
 import scipy.io as sio
 from sklearn.metrics import accuracy_score
+from tqdm import tqdm
 
 from eval_detection import ANETdetection
 
@@ -95,59 +96,85 @@ def test_bmn(itr, dataset, args, model, logger, device):
     element_logits_stack = []
     len_stack = []
     labels_stack = []
-    while not done:
-        if dataset.currenttestidx % 100 == 0:
-            print(
-                "Testing test data point %d of %d"
-                % (dataset.currenttestidx, len(dataset.testidx))
-            )
+    ind_stack = []
 
-        features, labels, done = dataset.load_data(is_training=False)
+    iou = [0.1, 0.3, 0.5, 0.7]
+    dmap_detect = ANETdetection(dataset.path_to_annotations, iou, args=args)
+
+    pbar = tqdm(total=len(dmap_detect.videoname))
+    counter = 0
+    # while not done:
+    #     if dataset.currenttestidx % 100 == 0:
+    #         print(
+    #             "Testing test data point %d of %d"
+    #             % (dataset.currenttestidx, len(dataset.testidx))
+    #         )
+
+    for features, labels, idx in tqdm(dataset.load_data(is_training=False)):
 
         features_in, flag = utils.len_extract(features, args.max_seqlen)
 
         features_in = torch.from_numpy(features_in).float().to(device)
         features_in = features_in.unsqueeze(0)
 
-        element_logits, _, conf_map = model(features_in)
+        element_logits, instance_logits, conf_map = model(features_in, is_training=False)
+        element_logits = element_logits.squeeze()  # cls, T
+        instance_logits = torch.softmax(
+            instance_logits.squeeze(), dim=-1
+        )  # --> 1, cls
+        conf_map = conf_map.squeeze()  # 3*cls, T, T
 
         if flag is not None:
-            if flag[0] == "pad":
-                _seq = flag[1]
-                conf_map = conf_map[:, :, :_seq, :_seq]
+            # if flag[0] == "pad":
+            #     _seq = flag[1]
+            #     conf_map = conf_map[..., :_seq, :_seq]
+            mul = float(flag[1] / conf_map.shape[-1])
+        else:
+            mul = 1
 
-        # conf_map_soft = torch.softmax(conf_map, dim=1)
-        # conf_map_atn = torch.triu(attention_map * conf_map_soft, diagonal=1)
-        # conf_reduced = conf_map_atn.reshape(args.num_class, -1).max(dim=-1)[0]
+        _mask = torch.tril(torch.ones_like(conf_map), diagonal=0)
+        conf_map[_mask > 0] = -10000
+        segment_predict =  []
+        for c in range(args.num_class):
+            if instance_logits[c] < 0.1:
+                continue
+            tmp_conf_s = conf_map[c]  # --> T, T
+            tmp_conf_m = conf_map[args.num_class+c]  # --> T, T
+            tmp_conf_e = conf_map[2*args.num_class+c]  # --> T, T
 
-        B, C, *_ = conf_map.shape
-        conf_map = torch.sigmoid(conf_map)
-        conf_tri = torch.triu(conf_map, diagonal=2).reshape(B, C, -1)
+            threshold = (element_logits[c].max() - element_logits[c].min())*0.5 + \
+                    element_logits[c].min()
+            
+            tmp_conf_score = (tmp_conf_m-tmp_conf_s) + (tmp_conf_m-tmp_conf_e)
 
-        pred_label = conf_tri.max(-1)[0]
+            tmp_mask = (tmp_conf_m > threshold) & (tmp_conf_s < threshold) & \
+                (tmp_conf_e < threshold)
+            
+            tmp_conf_score = tmp_conf_score * tmp_mask
 
-        tmp = pred_label.squeeze().data.cpu().numpy()
+            for each_ind in tmp_mask.nonzero():
+                s, e = each_ind.data.cpu().numpy()
+                scr = float(tmp_conf_score[s, e].data)
+                segment_predict.append(
+                    [counter, int(s*mul), int(e*mul), scr, c]
+                )
+
+        tmp = instance_logits.squeeze().data.cpu().numpy()
         instance_logits_stack.append(tmp)
         labels_stack.append(labels)
 
-        # conf_map_mul_ = conf_map_mul_ / (
-        #     conf_map_mul_.reshape(conf_map_mul_.shape[0], -1)
-        #     .max(-1)[0]
-        #     .reshape(conf_map_mul_.shape[0], 1, 1, 1)
-        # )
-        # conf_reshaped = conf_map_mul_.squeeze().data.cpu().numpy()
+        ind_stack.append(idx)
+        counter += 1
+        # pbar.update()
 
-        # element_logits_stack.append(conf_reshaped)
-        # len_stack.append(features.shape[0])
+        if counter > 10:
+            break
 
     instance_logits_stack = np.array(instance_logits_stack)
     labels_stack = np.array(labels_stack)
 
-    iou = [0.1, 0.3, 0.5, 0.7]
-
-    # dmap_detect = ANETdetection(dataset.path_to_annotations, iou, args=args)
-    # dmap_detect._import_prediction_bmn(element_logits_stack, len_stack)
-    # dmap = dmap_detect.evaluate()
+    dmap_detect._import_prediction_bmn(segment_predict)
+    dmap = dmap_detect.evaluate(ind_to_keep=ind_stack)
 
     if args.dataset_name == "Thumos14":
         test_set = sio.loadmat("test_set_meta.mat")["test_videos"][0]

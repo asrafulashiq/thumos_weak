@@ -5,7 +5,6 @@ import torch.nn.functional as F
 import torch.nn.init as torch_init
 from torch.nn.utils import weight_norm
 from torch.autograd import Variable
-
 import math
 
 torch.set_default_tensor_type("torch.cuda.FloatTensor")
@@ -51,7 +50,7 @@ class Custom_BMN(nn.Module):
 
         self.n_class = args.num_class
 
-        self._get_interp1d_mask()
+        self.sample_mask = self._get_interp1d_mask()
 
         # Base Module
         self.conv_1d_b = nn.Sequential(
@@ -94,7 +93,7 @@ class Custom_BMN(nn.Module):
 
         self.apply(weights_init)
 
-    def forward(self, x):
+    def forward(self, x, is_training=True):
         x = x.permute(0, 2, 1)  # B, C, T
         B, C, T = x.shape
         x_feature = self.conv_1d_b(x)  # --> B, C, T
@@ -113,12 +112,18 @@ class Custom_BMN(nn.Module):
         y_atn = self.conv_atn(x_feature)  # --> B, 1, T
 
         # bmn class --> B, 3*cls, T, T
-        bmn_class = self._boundary_matching_layer(y_class)
-        bmn_class = (
-            bmn_class[:, :self.n_class] + 
-            bmn_class[:, self.n_class: -self.n_class] +
-            bmn_class[:, -self.n_class:]
-        )  # --> B, cls, T, T
+        if is_training:
+            bmn_class = self._boundary_matching_layer(y_class, self.sample_mask, self.tscale)
+        else:
+            sample_mask = self._get_interp1d_mask(T)
+            bmn_class = self._boundary_matching_layer(y_class, sample_mask, T)
+
+        # bmn_strt, bmn_mid, bmn_end = (
+        #     bmn_class[:, :self.n_class],
+        #     bmn_class[:, self.n_class: -self.n_class],
+        #     bmn_class[:, -self.n_class:]
+        # )  # --> B, cls, T, T
+        # bmn_cls_score = torch.abs(bmn_mid-bmn_strt) + torch.abs(bmn_mid-bmn_end)
 
         # --> B, C, 1
         x_fg = (torch.sigmoid(y_atn) * x_feature).sum(-1, keepdim=True) / (
@@ -129,12 +134,12 @@ class Custom_BMN(nn.Module):
 
         return y_class, y_fg, bmn_class
 
-    def _boundary_matching_layer(self, x):
+    def _boundary_matching_layer(self, x, sample_mask, tscale):
         input_size = x.size()  # B, C, T
 
         # (B, C, T) x (T, N x T x T) --> B, C, N , T , T
-        out = torch.matmul(x, self.sample_mask).reshape(
-            input_size[0], input_size[1], self.num_sample, self.tscale, self.tscale
+        out = torch.matmul(x, sample_mask).reshape(
+            input_size[0], input_size[1], self.num_sample, tscale, tscale
         )
 
         out_start = torch.mean(out[:, :, : self.num_sample // 4], dim=2)
@@ -174,12 +179,14 @@ class Custom_BMN(nn.Module):
         p_mask = np.stack(p_mask, axis=1)
         return p_mask
 
-    def _get_interp1d_mask(self):
+    def _get_interp1d_mask(self, tscale=None):
         # generate sample mask for each point in Boundary-Matching Map
+        if tscale is None:
+            tscale = self.tscale
         mask_mat = []
-        for start_index in range(self.tscale):
+        for start_index in range(tscale):
             mask_mat_vector = []
-            for end_index in range(self.tscale):
+            for end_index in range(tscale):
                 if end_index >= start_index:
                     p_xmin = start_index
                     p_xmax = end_index
@@ -189,19 +196,20 @@ class Custom_BMN(nn.Module):
                     p_mask = self._get_interp1d_bin_mask(
                         sample_xmin,
                         sample_xmax,
-                        self.tscale,
+                        tscale,
                         self.num_sample,
                         self.num_sample_perbin,
                     )
                 else:
-                    p_mask = np.zeros([self.tscale, self.num_sample])
+                    p_mask = np.zeros([tscale, self.num_sample])
                 mask_mat_vector.append(p_mask)
             mask_mat_vector = np.stack(mask_mat_vector, axis=2)
             mask_mat.append(mask_mat_vector)
         mask_mat = np.stack(mask_mat, axis=3)
         mask_mat = mask_mat.astype(np.float32)
         mask_mat = mask_mat.transpose(0, 1, 3, 2)
-        self.sample_mask = torch.Tensor(mask_mat).view(self.tscale, -1)
+        sample_mask = torch.Tensor(mask_mat).view(tscale, -1)
+        return sample_mask
 
 
 class BMN(nn.Module):

@@ -129,16 +129,20 @@ class ANETdetection(object):
 
         self.templabelidx = templabelidx
 
-        video_lst, t_start_lst, t_end_lst, label_lst = [], [], [], []
+        video_lst, t_start_lst, t_end_lst, label_lst, _id = [], [], [], [], []
 
         for i in range(len(gtsegments)):
+            # if self.ind_to_keep is not None and i not in self.ind_to_keep:
+            #     continue
             for j in range(len(gtsegments[i])):
+                _id.append(i)
                 video_lst.append(str(videoname[i]))
                 t_start_lst.append(round(gtsegments[i][j][0]*25/16))
                 t_end_lst.append(round(gtsegments[i][j][1]*25/16))
                 label_lst.append(str2ind(gtlabels[i][j], self.classlist))
         ground_truth = pd.DataFrame(
             {
+                "id": _id,
                 "video-id": video_lst,
                 "t-start": t_start_lst,
                 "t-end": t_end_lst,
@@ -147,6 +151,10 @@ class ANETdetection(object):
         )
         self.ground_truth = ground_truth
         self.activity_index = {i:templabelidx[i] for i in range(len(templabelidx))}
+
+    def __getitem__(self, idx):
+        rows = self.ground_truth[self.ground_truth["id"] == idx]
+        return rows
 
     def get_topk_mean(self, x, k, axis=0):
         return np.mean(np.sort(x, axis=axis)[-int(k):, :], axis=0)
@@ -174,66 +182,66 @@ class ANETdetection(object):
         return pred, c_s
 
 
-    def _import_prediction_bmn(self, predictions, len_stack):
-        pred = []
-        _len = []
-        for i, p in enumerate(predictions):
-            if i in self.idx_to_take:
-                pred.append(p)
-                _len.append(len_stack[i])
-        predictions = pred
-        len_stack = _len
+    def _import_prediction_bmn(self, segment_predict):
+        # pred = []
+        # _len = []
+        # for i, p in enumerate(predictions):
+        #     if i in self.idx_to_take:
+        #         pred.append(p)
+        #         _len.append(len_stack[i])
+        # predictions = pred
+        # len_stack = _len
 
-        args = self.args
-        segment_predict = []
+        # args = self.args
+        # segment_predict = []
 
-        for c in self.templabelidx:
-            for i in range(len(predictions)):
-                tmp = predictions[i][c, ...]
+        # for c in self.templabelidx:
+        #     for i in range(len(predictions)):
+        #         tmp = predictions[i][c, ...]
 
-                if tmp.shape[0] < len_stack[i]:
-                    mul = len_stack[i] / tmp.shape[0]
-                else:
-                    mul = 1.
+        #         if tmp.shape[0] < len_stack[i]:
+        #             mul = len_stack[i] / tmp.shape[0]
+        #         else:
+        #             mul = 1.
 
-                if args is None:
-                    thres = 0.5
-                else:
-                    thres = args.thres
+        #         if args is None:
+        #             thres = 0.5
+        #         else:
+        #             thres = args.thres
 
-                tmp_max = np.max(tmp, -1)
-                end_max = np.argmax(tmp, -1)
+        #         tmp_max = np.max(tmp, -1)
+        #         end_max = np.argmax(tmp, -1)
 
-                ind_start = np.where(tmp_max > thres)[0]
-                ind_end = end_max[ind_start]
-                conf_filtered = tmp_max[ind_start]
+        #         ind_start = np.where(tmp_max > thres)[0]
+        #         ind_end = end_max[ind_start]
+        #         conf_filtered = tmp_max[ind_start]
 
-                if len(conf_filtered) > 0:
-                    _strt = []
-                    _end = []
-                    _conf = []
-                    for each in np.unique(ind_end):
-                        tmp_end = ind_end[ind_end==each]
-                        tmp_strt = ind_start[ind_end==each]
-                        tmp_conf = conf_filtered[ind_end==each]
-                        _ii = np.argmax(tmp_conf)
-                        _strt.append(tmp_strt[_ii])
-                        _end.append(tmp_end[_ii])
-                        _conf.append(tmp_conf[_ii])
-                    ind_start = _strt
-                    ind_end = _end
-                    conf_filtered = _conf
+        #         if len(conf_filtered) > 0:
+        #             _strt = []
+        #             _end = []
+        #             _conf = []
+        #             for each in np.unique(ind_end):
+        #                 tmp_end = ind_end[ind_end==each]
+        #                 tmp_strt = ind_start[ind_end==each]
+        #                 tmp_conf = conf_filtered[ind_end==each]
+        #                 _ii = np.argmax(tmp_conf)
+        #                 _strt.append(tmp_strt[_ii])
+        #                 _end.append(tmp_end[_ii])
+        #                 _conf.append(tmp_conf[_ii])
+        #             ind_start = _strt
+        #             ind_end = _end
+        #             conf_filtered = _conf
 
-                for kk in range(len(conf_filtered)):
-                    s = ind_start[kk] * mul
-                    e = ind_end[kk] * mul
-                    # if e - s >= 2:
-                    segment_predict.append(
-                        [i, round(s), round(e), conf_filtered[kk], int(c)]
-                    )
+        #         for kk in range(len(conf_filtered)):
+        #             s = ind_start[kk] * mul
+        #             e = ind_end[kk] * mul
+        #             # if e - s >= 2:
+        #             segment_predict.append(
+        #                 [i, round(s), round(e), conf_filtered[kk], int(c)]
+        #             )
 
         segment_predict = np.array(segment_predict)
-        segment_predict = filter_segments(segment_predict, self.videoname, self.ambilist)
+        # segment_predict = filter_segments(segment_predict, self.videoname, self.ambilist)
 
         # Read predictions.
         video_lst, t_start_lst, t_end_lst = [], [], []
@@ -365,11 +373,13 @@ class ANETdetection(object):
 
         return ap
 
-    def evaluate(self):
+    def evaluate(self, ind_to_keep=None):
         """Evaluates a prediction file. For the detection task we measure the
         interpolated mean average precision to measure the performance of a
         method.
         """
+        if ind_to_keep is not None:
+            self.ground_truth = self.ground_truth[self.ground_truth['id'].isin(ind_to_keep)]
         if self.verbose:
             print("[INIT] Loaded annotations from {} subset.".format(self.subset))
             nr_gt = len(self.ground_truth)

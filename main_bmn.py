@@ -30,8 +30,8 @@ if __name__ == "__main__":
 
     model = Custom_BMN(args)
 
-    if torch.cuda.device_count() > 1:
-        model = torch.nn.DataParallel(model)
+    # if torch.cuda.device_count() > 1:
+    #     model = torch.nn.DataParallel(model)
     model = model.to(device)
 
     model_params = filter(lambda x: x.requires_grad, model.parameters())
