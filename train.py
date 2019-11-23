@@ -44,23 +44,27 @@ def MIL_BMN(conf_map, seq_len, labels, device, args):
 
     # labels_conf_map = torch.zeros_like(conf_map)
     
-    conf_map_tri = torch.triu(conf_map, diagonal=2).reshape(B, C, -1)
-    # negetive classes
-    neg_mask = (labels < 0.5).to(device)
-    pos_mask = (labels >= 0.5).to(device)
+    # conf_map_tri = torch.triu(conf_map, diagonal=2).reshape(B, C, -1)
+    # # negetive classes
+    # neg_mask = (labels < 0.5).to(device)
+    # pos_mask = (labels >= 0.5).to(device)
 
-    loss_neg = -torch.sum(torch.log(1 - torch.triu(torch.sigmoid(
-        conf_map[neg_mask]), diagonal=2
-    ))) /  (neg_mask.sum() * (T*(T+1)/2 - 2*T + 1 ))
+    # loss_neg = -torch.sum(torch.log(1 - torch.triu(torch.sigmoid(
+    #     conf_map[neg_mask]), diagonal=2
+    # ))) /  (neg_mask.sum() * (T*(T+1)/2 - 2*T + 1 ))
 
-    pos_val = conf_map_tri[pos_mask].max(-1)[0]
-    loss_pos = - torch.mean(F.logsigmoid(pos_val))
+    # pos_val = conf_map_tri[pos_mask].max(-1)[0]
+    # loss_pos = - torch.mean(F.logsigmoid(pos_val))
 
-    milloss = loss_pos + loss_neg
+    # milloss = loss_pos + loss_neg
 
-    # conf_map_1 = torch.triu(torch.softmax(args.beta1 * conf_map, dim=-2), diagonal=1)
-    # conf_map_2 = torch.triu(torch.softmax(args.beta1 * conf_map, dim=-1), diagonal=1)
-    # conf_map_mul = conf_map_1 * conf_map_2
+    _mask = (torch.tril(torch.ones_like(conf_map), diagonal=-1) > 0.).to(device)
+    conf_map[_mask] = -10000.0
+
+    conf_map_1 = torch.softmax(args.beta1 * conf_map, dim=-2)
+    conf_map_2 = torch.softmax(args.beta1 * conf_map, dim=-1)
+    conf_map_mul = conf_map_1 * conf_map_2
+    conf_map_mul = conf_map_mul[~_mask].view(B, C, -1)  # --> B, C, kT
     # conf_map_mul = conf_map_mul.view(B, C, -1)
 
     # conf_map_reduced = (conf_map.view(B, C, -1) * conf_map_mul).sum(-1) / (
