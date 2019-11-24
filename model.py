@@ -115,8 +115,8 @@ class Custom_BMN(nn.Module):
         if is_training:
             bmn_class = self._boundary_matching_layer(y_class, self.sample_mask, self.tscale)
         else:
-            sample_mask = self._get_interp1d_mask(T)
-            bmn_class = self._boundary_matching_layer(y_class, sample_mask, T)
+            # sample_mask = self._get_interp1d_mask(T)
+            bmn_class = self._boundary_matching_layer(y_class, self.sample_mask, self.tscale)
 
         # bmn_strt, bmn_mid, bmn_end = (
         #     bmn_class[:, :self.n_class],

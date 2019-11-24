@@ -5,7 +5,7 @@
 
 ## TODO:
 1. BMN
-   1. Implement Soft-NMS
+   1. ~~Implement Soft-NMS~~
    2. BMN loss function: 
       - OIC loss (*low-high-low*)
       - Think about what to do with overlap? 

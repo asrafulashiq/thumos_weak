@@ -123,14 +123,7 @@ def test_bmn(itr, dataset, args, model, logger, device):
     iou = [0.1, 0.3, 0.5, 0.7]
     dmap_detect = ANETdetection(dataset.path_to_annotations, iou, args=args)
 
-    # pbar = tqdm(total=len(dmap_detect.videoname))
     counter = 0
-    # while not done:
-    #     if dataset.currenttestidx % 100 == 0:
-    #         print(
-    #             "Testing test data point %d of %d"
-    #             % (dataset.currenttestidx, len(dataset.testidx))
-    #         )
 
     segment_predict =  []
     for features, labels, idx in tqdm(dataset.load_test()):
@@ -145,62 +138,69 @@ def test_bmn(itr, dataset, args, model, logger, device):
         instance_logits = torch.softmax(
             instance_logits.squeeze(), dim=-1
         )  # --> 1, cls
-        conf_map = conf_map.squeeze()  # 3*cls, T, T
+        # conf_map = conf_map.squeeze()  # 3*cls, T, T
 
         if flag is not None:
-            # if flag[0] == "pad":
-            #     _seq = flag[1]
-            #     conf_map = conf_map[..., :_seq, :_seq]
+            if flag[0] == "pad":
+                _seq = flag[1]
+                # conf_map = conf_map[..., :_seq, :_seq]
+                element_logits = element_logits[..., :_seq]
             seglen = flag[1]
         else:
             seglen = conf_map.shape[-1]
 
-        _mask = torch.tril(torch.ones_like(conf_map), diagonal=0)
-        conf_map[_mask > 0] = -10000
-
+        element_logits_stack.append(element_logits.permute(1, 0).data.cpu().numpy())
         tmp = instance_logits.squeeze().data.cpu().numpy()
-        for c in range(args.num_class):
-            # if instance_logits[c] < 0.1:
-            #     continue
-            tmp_conf_s = conf_map[c]  # --> T, T
-            tmp_conf_m = conf_map[args.num_class+c]  # --> T, T
-            tmp_conf_e = conf_map[2*args.num_class+c]  # --> T, T
-
-            threshold = (element_logits[c].max() - element_logits[c].min())*0.5 + \
-                    element_logits[c].min()
-            
-            tmp_conf_score = (tmp_conf_m-tmp_conf_s) + (tmp_conf_m-tmp_conf_e)
-
-            tmp_mask = (tmp_conf_m > threshold) & (tmp_conf_s < threshold) & \
-                (tmp_conf_e < threshold)
-
-            tmp_conf_score = tmp_conf_score * tmp_mask
-
-            _len = tmp_conf_s.shape[-1]
-
-            for each_ind in tmp_mask.nonzero():
-                s, e = each_ind.data.cpu().numpy()
-                scr = float(tmp_conf_score[s, e].data)
-                segment_predict.append(
-                    [idx, s/_len, e/_len, scr*tmp[c], c, seglen]
-                )
         instance_logits_stack.append(tmp)
         labels_stack.append(labels)
 
-        ind_stack.append(idx)
-        counter += 1
-        # pbar.update()
+        # _mask = torch.tril(torch.ones_like(conf_map), diagonal=0)
+        # conf_map[_mask > 0] = -10000
 
-        if counter > 5:
-            break
+        # tmp = instance_logits.squeeze().data.cpu().numpy()
+        # for c in range(args.num_class):
+        #     # if instance_logits[c] < 0.1:
+        #     #     continue
+        #     tmp_conf_s = conf_map[c]  # --> T, T
+        #     tmp_conf_m = conf_map[args.num_class+c]  # --> T, T
+        #     tmp_conf_e = conf_map[2*args.num_class+c]  # --> T, T
+
+        #     threshold = (element_logits[c].max() - element_logits[c].min())*0.5 + \
+        #             element_logits[c].min()
+            
+        #     tmp_conf_score = (tmp_conf_m-tmp_conf_s) + (tmp_conf_m-tmp_conf_e)
+
+        #     tmp_mask = (tmp_conf_m > threshold) & (tmp_conf_s < threshold) & \
+        #         (tmp_conf_e < threshold)
+
+        #     tmp_conf_score = tmp_conf_score * tmp_mask
+
+        #     _len = tmp_conf_s.shape[-1]
+
+        #     for each_ind in tmp_mask.nonzero():
+        #         s, e = each_ind.data.cpu().numpy()
+        #         scr = float(tmp_conf_score[s, e].data)
+        #         segment_predict.append(
+        #             [idx, s/_len, e/_len, scr*tmp[c], c, seglen]
+        #         )
+        # instance_logits_stack.append(tmp)
+        # labels_stack.append(labels)
+
+        # ind_stack.append(idx)
+        # counter += 1
+        # # pbar.update()
+
+        # if counter > 5:
+        #     break
 
     instance_logits_stack = np.array(instance_logits_stack)
     labels_stack = np.array(labels_stack)
 
-    dmap_detect._import_prediction_bmn(segment_predict)
+    # dmap_detect._import_prediction_bmn(segment_predict)
+    dmap_detect._import_prediction(element_logits_stack)
 
-    new_pred = video_post_process(dmap_detect.prediction, dmap_detect.video_info)
-    dmap_detect.prediction = new_pred
+    # new_pred = video_post_process(dmap_detect.prediction, dmap_detect.video_info)
+    # dmap_detect.prediction = new_pred
 
     dmap = dmap_detect.evaluate(ind_to_keep=ind_stack)
 

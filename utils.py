@@ -47,15 +47,15 @@ def len_extract(feat, t_max):
         nind = np.array([np.random.choice(split, 1)[0] for split in splits])
         return feat[nind], ("rand", feat.shape[0])
     elif feat.shape[0] <= t_max:
-        # _feat = np.pad(
-        #     feat,
-        #     ((0, t_max - feat.shape[0]), (0, 0)),
-        #     mode="constant",
-        #     constant_values=0,
-        # )
-        # return _feat, ("pad", feat.shape[0])
+        _feat = np.pad(
+            feat,
+            ((0, t_max - feat.shape[0]), (0, 0)),
+            mode="constant",
+            constant_values=0,
+        )
+        return _feat, ("pad", feat.shape[0])
     # else:
-        return feat, None
+        # return feat, None
 
 
 def pad(feat, min_len):

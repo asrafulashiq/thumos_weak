@@ -123,7 +123,7 @@ class ANETdetection(object):
         self.video_info = pd.DataFrame(
             {
                 "video-id": videoname,
-                "duration": duration,
+                "duration": duration*25/16,
                 "gt-labels": gtlabels,
                 "gt-segments": gtsegments,
                 "_id": list(range(len(videoname)))
@@ -296,25 +296,26 @@ class ANETdetection(object):
         predictions = pred
 
         # process the predictions such that classes having greater than a certain threshold are detected only
-        predictions_mod = []
-        c_score = []
-        for p in predictions:
-            # pp = -p
-            # [pp[:, i].sort() for i in range(np.shape(pp)[1])]
-            # pp = -pp
-            # c_s = np.mean(pp[: int(np.ceil(np.shape(pp)[0] / 8)), :], axis=0)
-            # ind = c_s > -50
-            # pind = p * ind
-            pind, c_s = self._get_vid_score(p)
-            c_score.append(c_s)
-            predictions_mod.append(pind)
+        # predictions_mod = []
+        # c_score = []
+        # for p in predictions:
+        #     # pp = -p
+        #     # [pp[:, i].sort() for i in range(np.shape(pp)[1])]
+        #     # pp = -pp
+        #     # c_s = np.mean(pp[: int(np.ceil(np.shape(pp)[0] / 8)), :], axis=0)
+        #     # ind = c_s > -50
+        #     # pind = p * ind
+        #     pind, c_s = self._get_vid_score(p)
+        #     c_score.append(c_s)
+        #     predictions_mod.append(pind)
 
-        predictions = predictions_mod
+        # predictions = predictions_mod
         args = self.args
         segment_predict = []
 
         for c in self.templabelidx:
             for i in range(len(predictions)):
+                
                 tmp = smooth(predictions[i][:, c])
                 if args is None:
                     thres = 0.5
@@ -330,14 +331,17 @@ class ANETdetection(object):
                 ]
                 s = [idk for idk, item in enumerate(vid_pred_diff) if item == 1]
                 e = [idk for idk, item in enumerate(vid_pred_diff) if item == -1]
+
+                duration = self.video_info[self.video_info["_id"]==i]["duration"].values[0]
+                cur_len = len(tmp)
                 for j in range(len(s)):
                     if e[j] - s[j] >= 2:
                         segment_predict.append(
-                            [i, s[j], e[j], np.max(tmp[s[j] : e[j]]) + 0.0 * c_score[i][c],
+                            [i, s[j]/cur_len*duration, e[j]/cur_len*duration, np.max(tmp[s[j] : e[j]]),
                             c]
                         )
         segment_predict = np.array(segment_predict)
-        segment_predict = filter_segments(segment_predict, self.videoname, self.ambilist)
+        # segment_predict = filter_segments(segment_predict, self.videoname, self.ambilist)
 
         # Read predictions.
         video_lst, t_start_lst, t_end_lst = [], [], []
@@ -349,6 +353,7 @@ class ANETdetection(object):
             t_end_lst.append(segment_predict[i, 2])
             score_lst.append(segment_predict[i, 3])
             label_lst.append(segment_predict[i, 4])
+
         prediction = pd.DataFrame(
             {
                 "video-id": video_lst,
@@ -381,22 +386,8 @@ class ANETdetection(object):
         ground_truth_by_label = self.ground_truth.groupby("label")
         prediction_by_label = self.prediction.groupby("label")
 
-        # results = Parallel(n_jobs=1)(
-        #     delayed(compute_average_precision_detection)(
-        #         ground_truth=ground_truth_by_label.get_group(cidx).reset_index(
-        #             drop=True
-        #         ),
-        #         prediction=self._get_predictions_with_label(
-        #             prediction_by_label, cidx, cidx
-        #         ),
-        #         tiou_thresholds=self.tiou_thresholds,
-        #     )
-        #     for cidx in activity_index
-        # )
-
-        results = []
-        for cidx in activity_index:
-            res = compute_average_precision_detection(
+        results = Parallel(n_jobs=1)(
+            delayed(compute_average_precision_detection)(
                 ground_truth=ground_truth_by_label.get_group(cidx).reset_index(
                     drop=True
                 ),
@@ -405,7 +396,21 @@ class ANETdetection(object):
                 ),
                 tiou_thresholds=self.tiou_thresholds,
             )
-            results.append(res)
+            for cidx in activity_index
+        )
+
+        # results = []
+        # for cidx in activity_index:
+        #     res = compute_average_precision_detection(
+        #         ground_truth=ground_truth_by_label.get_group(cidx).reset_index(
+        #             drop=True
+        #         ),
+        #         prediction=self._get_predictions_with_label(
+        #             prediction_by_label, cidx, cidx
+        #         ),
+        #         tiou_thresholds=self.tiou_thresholds,
+        #     )
+        #     results.append(res)
 
         for i, cidx in enumerate(activity_index):
             ap[:, i] = results[i]
@@ -417,7 +422,7 @@ class ANETdetection(object):
         interpolated mean average precision to measure the performance of a
         method.
         """
-        if ind_to_keep is not None:
+        if ind_to_keep is not None and len(ind_to_keep) > 0:
             self.ground_truth = self.ground_truth[self.ground_truth['id'].isin(ind_to_keep)]
         if self.verbose:
             print("[INIT] Loaded annotations from {} subset.".format(self.subset))
