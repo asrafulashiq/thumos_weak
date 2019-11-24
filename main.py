@@ -70,12 +70,9 @@ if __name__ == "__main__":
                 },
                 "./ckpt/base/" + args.model_name + ".pkl",
             )
-        if itr % 100 == 0:
-            if itr % 500 == 0:
-                args.test = True
+        if itr % 200 == 0:
             print("Iter: {}".format(itr))
             dmap = test(itr, dataset, args, model, logger, device)
-            args.test = False
 
     print("\n\n")
     # print(

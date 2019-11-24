@@ -16,7 +16,7 @@ torch.set_default_tensor_type("torch.cuda.FloatTensor")
 @torch.no_grad()
 def test(itr, dataset, args, model, logger, device):
 
-    model.eval()
+    # model.eval()
 
     done = False
     instance_logits_stack = []
@@ -35,12 +35,14 @@ def test(itr, dataset, args, model, logger, device):
         features = features.unsqueeze(0)
         # _, element_logits = model(Variable(features), is_training=False)
         element_cls, element_atn = model(features)
-        y_cls = (element_cls * element_atn).sum(-1) / element_atn.shape[-1]
+        # atn_fg = torch.softmax(elements_atn, -1)
+        atn_fg = element_atn.sigmoid() / element_atn.sigmoid().sum(-1, keepdim=True)
+        y_cls = (element_cls * atn_fg).sum(-1) #/ element_atn.shape[-1]
         y_cls = y_cls.squeeze()
-        element_logits = (element_cls * element_atn).permute(0, 2, 1)
+        element_logits = (element_cls).permute(0, 2, 1)
         element_logits = element_logits.squeeze(0)[..., 1:]
         tmp = (
-            F.softmax(
+            torch.softmax(
                 y_cls, -1
             )[1:]  # omit the background class
             .cpu()
