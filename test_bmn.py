@@ -90,15 +90,6 @@ def video_post_process(df, video_info):
     # group by video id
     df_groups = df.groupby('video-id')
     list_df = []
-    # for each_grp in df_groups.groups.keys():
-    #     vid_id = each_grp
-    #     cur_group = df_groups.get_group(each_grp)
-    #     newdf = soft_nms(cur_group)
-    #     newdf.insert(0, "video-id", [vid_id]*newdf.shape[0], True)
-    #     duration = cur_group["duration"].values[0]
-    #     newdf["t-start"] = np.maximum(newdf["t-start"].values, 0) * duration
-    #     newdf["t-end"] = np.minimum(newdf["t-end"].values, 1) * duration
-    #     list_df.append(newdf)
     list_df = Parallel(n_jobs=5)(
         delayed(_post_process)(
             each_grp, df_groups
@@ -129,9 +120,9 @@ def test_bmn(itr, dataset, args, model, logger, device):
     for features, labels, idx in tqdm(dataset.load_test()):
         ind_stack.append(idx)
 
-        features_in, flag = utils.len_extract(features, args.max_seqlen)
+        # features_in, flag = utils.len_extract(features, args.max_seqlen)
 
-        # features_in = features
+        features_in = features
         features_in = torch.from_numpy(features_in).float().to(device)
         features_in = features_in.unsqueeze(0)
 
@@ -142,14 +133,14 @@ def test_bmn(itr, dataset, args, model, logger, device):
         )  # --> 1, cls
         # conf_map = conf_map.squeeze()  # 3*cls, T, T
 
-        if flag is not None:
-            if flag[0] == "pad":
-                _seq = flag[1]
-                # conf_map = conf_map[..., :_seq, :_seq]
-                element_logits = element_logits[..., :_seq]
-            seglen = flag[1]
-        else:
-            seglen = conf_map.shape[-1]
+        # if flag is not None:
+        #     if flag[0] == "pad":
+        #         _seq = flag[1]
+        #         # conf_map = conf_map[..., :_seq, :_seq]
+        #         element_logits = element_logits[..., :_seq]
+        #     seglen = flag[1]
+        # else:
+        #     seglen = conf_map.shape[-1]
 
         element_logits_stack.append(element_logits.permute(1, 0).data.cpu().numpy())
         tmp = instance_logits.squeeze().data.cpu().numpy()
@@ -201,8 +192,8 @@ def test_bmn(itr, dataset, args, model, logger, device):
     # dmap_detect._import_prediction_bmn(segment_predict)
     dmap_detect._import_prediction(element_logits_stack)
 
-    new_pred = video_post_process(dmap_detect.prediction, dmap_detect.video_info)
-    dmap_detect.prediction = new_pred
+    # new_pred = video_post_process(dmap_detect.prediction, dmap_detect.video_info)
+    # dmap_detect.prediction = new_pred
 
     dmap = dmap_detect.evaluate(ind_to_keep=ind_stack)
 
