@@ -111,13 +111,24 @@ class ANETdetection(object):
         duration = duration[subset_ind]
 
         self.idx_to_take = [i for i, s in enumerate(gtsegments)
-                            if len(s) >0 ]
+                            if len(s) > 0 ]
 
         gtsegments = gtsegments[self.idx_to_take]
         gtlabels = gtlabels[self.idx_to_take]
         videoname = videoname[self.idx_to_take]
+        duration = duration[self.idx_to_take].squeeze()
 
-        self.videoname = videoname
+        self.videoname = np.array(videoname)
+
+        self.video_info = pd.DataFrame(
+            {
+                "video-id": videoname,
+                "duration": duration,
+                "gt-labels": gtlabels,
+                "gt-segments": gtsegments,
+                "_id": list(range(len(videoname)))
+            }
+        )
 
         # which categories have temporal labels ?
         templabelcategories = sorted(list(set([l for gtl in gtlabels for l in gtl])))
@@ -245,21 +256,34 @@ class ANETdetection(object):
 
         # Read predictions.
         video_lst, t_start_lst, t_end_lst = [], [], []
-        label_lst, score_lst = [], []
+        label_lst, score_lst, dur_lst = [], [], []
 
-        for i in range(np.shape(segment_predict)[0]):
-            video_lst.append(self.videoname[int(segment_predict[i, 0])])
-            t_start_lst.append(segment_predict[i, 1])
-            t_end_lst.append(segment_predict[i, 2])
-            score_lst.append(segment_predict[i, 3])
-            label_lst.append(segment_predict[i, 4])
+        # for i in range(np.shape(segment_predict)[0]):
+        #     video_lst.append(self.videoname[int(segment_predict[i, 0])])
+        #     t_start_lst.append(segment_predict[i, 1])
+        #     t_end_lst.append(segment_predict[i, 2])
+        #     score_lst.append(segment_predict[i, 3])
+        #     label_lst.append(segment_predict[i, 4])
+        #     dur_lst.append(segment_predict[i, 5])
+        
+        # prediction = pd.DataFrame(
+        #     {
+        #         "video-id": video_lst,
+        #         "t-start": t_start_lst,
+        #         "t-end": t_end_lst,
+        #         "label": label_lst,
+        #         "score": score_lst,
+        #         "duration": dur_lst
+        #     }
+        # )
         prediction = pd.DataFrame(
             {
-                "video-id": video_lst,
-                "t-start": t_start_lst,
-                "t-end": t_end_lst,
-                "label": label_lst,
-                "score": score_lst,
+                "video-id": self.videoname[segment_predict[:, 0].astype(int)],
+                "t-start": segment_predict[:, 1],
+                "t-end": segment_predict[:, 2],
+                "score": segment_predict[:, 3],
+                "label": segment_predict[:, 4],
+                "duration": segment_predict[:, 5]
             }
         )
         self.prediction = prediction
@@ -349,27 +373,42 @@ class ANETdetection(object):
     def wrapper_compute_average_precision(self):
         """Computes average precision for each class in the subset.
         """
-        ap = np.zeros((len(self.tiou_thresholds), len(self.activity_index)))
+
+        activity_index = self.ground_truth.label.unique()
+        ap = np.zeros((len(self.tiou_thresholds), len(activity_index)))
 
         # Adaptation to query faster
         ground_truth_by_label = self.ground_truth.groupby("label")
         prediction_by_label = self.prediction.groupby("label")
 
-        results = Parallel(n_jobs=3)(
-            delayed(compute_average_precision_detection)(
+        # results = Parallel(n_jobs=1)(
+        #     delayed(compute_average_precision_detection)(
+        #         ground_truth=ground_truth_by_label.get_group(cidx).reset_index(
+        #             drop=True
+        #         ),
+        #         prediction=self._get_predictions_with_label(
+        #             prediction_by_label, cidx, cidx
+        #         ),
+        #         tiou_thresholds=self.tiou_thresholds,
+        #     )
+        #     for cidx in activity_index
+        # )
+
+        results = []
+        for cidx in activity_index:
+            res = compute_average_precision_detection(
                 ground_truth=ground_truth_by_label.get_group(cidx).reset_index(
                     drop=True
                 ),
                 prediction=self._get_predictions_with_label(
-                    prediction_by_label, label_name, cidx
+                    prediction_by_label, cidx, cidx
                 ),
                 tiou_thresholds=self.tiou_thresholds,
             )
-            for label_name, cidx in self.activity_index.items()
-        )
+            results.append(res)
 
-        for i, cidx in enumerate(self.activity_index.values()):
-            ap[:, cidx] = results[i]
+        for i, cidx in enumerate(activity_index):
+            ap[:, i] = results[i]
 
         return ap
 

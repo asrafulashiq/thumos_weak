@@ -157,24 +157,43 @@ class Dataset:
             return feat, labels
 
         else:
-            for idx in self.testidx:
-                labs = self.labels_multihot[idx]
-                feat = self.features[idx]
-                feat = utils.process_feat(feat, normalize=self.normalize)
+            labs = self.labels_multihot[self.testidx[self.currenttestidx]]
+            feat = self.features[self.testidx[self.currenttestidx]]
+            feat = utils.process_feat(feat, normalize=self.normalize)
 
-                # if self.currenttestidx == len(self.testidx) - 1:
-                #     done = True
-                #     self.currenttestidx = 0
-                # else:
-                #     done = False
-                #     self.currenttestidx += 1
+            if self.currenttestidx == len(self.testidx) - 1:
+                done = True
+                self.currenttestidx = 0
+            else:
+                done = False
+                self.currenttestidx += 1
 
-                feat = np.array(feat)
-                if self.mode == 'rgb':
-                    feat = feat[..., :self.feature_size]
-                elif self.mode == 'flow':
-                    feat = feat[..., self.feature_size:]
-                yield feat, np.array(labs), idx
+            feat = np.array(feat)
+            if self.mode == 'rgb':
+                feat = feat[..., :self.feature_size]
+            elif self.mode == 'flow':
+                feat = feat[..., self.feature_size:]
+            return feat, np.array(labs), done
+
+    def load_test(self, *args, **kwargs):
+        for i, idx in enumerate(self.testidx):
+            labs = self.labels_multihot[idx]
+            feat = self.features[idx]
+            feat = utils.process_feat(feat, normalize=self.normalize)
+
+            # if self.currenttestidx == len(self.testidx) - 1:
+            #     done = True
+            #     self.currenttestidx = 0
+            # else:
+            #     done = False
+            #     self.currenttestidx += 1
+
+            feat = np.array(feat)
+            if self.mode == 'rgb':
+                feat = feat[..., :self.feature_size]
+            elif self.mode == 'flow':
+                feat = feat[..., self.feature_size:]
+            yield feat, np.array(labs), i
 
     def load_valid(self):
         indices = np.random.choice(self.testidx, size=self.batch_size)

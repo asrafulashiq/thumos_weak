@@ -9,7 +9,8 @@ def getAP(conf,labels):
     fp = np.cumsum(fp).astype('float32'); tp = np.cumsum(tp).astype('float32')
     rec=tp/npos; prec=tp/(fp+tp)
     tmp = (labels[sortind]==1).astype('float32')
-
+    if npos == 0:
+        return -1
     return np.sum(tmp*prec)/npos
 
 def getClassificationMAP(confidence,labels):
@@ -17,5 +18,7 @@ def getClassificationMAP(confidence,labels):
 
     AP = []
     for i in range(np.shape(labels)[1]):
-       AP.append(getAP(confidence[:,i], labels[:,i]))
+        val = getAP(confidence[:,i], labels[:,i])
+        if val != -1:
+            AP.append(val)
     return 100*sum(AP)/len(AP)

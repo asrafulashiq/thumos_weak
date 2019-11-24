@@ -8,7 +8,8 @@ from model import Custom_BMN
 import options
 
 # from model import Model
-from test import test_bmn, test
+from test_bmn import test_bmn
+from test import test
 from train import train_bmn
 from dataset import Dataset
 from tensorboardX import SummaryWriter
@@ -80,7 +81,7 @@ if __name__ == "__main__":
             if itr % 500 == 0:
                 args.test = True
             print("Iter: {}".format(itr))
-            dmap = test(itr, dataset, args, model, logger, device)
+            dmap = test_bmn(itr, dataset, args, model, logger, device)
             args.test = False
 
     print("\n\n")
