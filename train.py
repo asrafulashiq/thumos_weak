@@ -23,226 +23,19 @@ def MILL(element_logits, seq_len, labels, device):
     )
     return milloss
 
-def MILL_atn(instance_logits, seq_len, labels, device):
+def MILL_atn(elements_cls, elements_atn, seq_len, labels, device):
     labels = labels / torch.sum(labels, dim=1, keepdim=True)
+
+    # --> B, cls+1
+    x_fg_cls = (elements_atn * elements_cls).sum(-1) / elements_cls.shape[-1]
 
     milloss = -torch.mean(
         torch.sum(
-            labels * F.log_softmax(instance_logits, dim=1), dim=1
+            labels * F.log_softmax(x_fg_cls, dim=1)[:, 1:], dim=1
         ),
         dim=0,
     )
     return milloss
-
-
-
-def MIL_BMN(conf_map, seq_len, labels, device, args):
-
-    B, C, T, _ = conf_map.shape  # B, Class, T, T
-
-    # conf_map = torch.sigmoid(conf_map)
-
-    # labels_conf_map = torch.zeros_like(conf_map)
-    
-    # conf_map_tri = torch.triu(conf_map, diagonal=2).reshape(B, C, -1)
-    # # negetive classes
-    # neg_mask = (labels < 0.5).to(device)
-    # pos_mask = (labels >= 0.5).to(device)
-
-    # loss_neg = -torch.sum(torch.log(1 - torch.triu(torch.sigmoid(
-    #     conf_map[neg_mask]), diagonal=2
-    # ))) /  (neg_mask.sum() * (T*(T+1)/2 - 2*T + 1 ))
-
-    # pos_val = conf_map_tri[pos_mask].max(-1)[0]
-    # loss_pos = - torch.mean(F.logsigmoid(pos_val))
-
-    # milloss = loss_pos + loss_neg
-
-    _mask = (torch.tril(torch.ones_like(conf_map), diagonal=-1) > 0.).to(device)
-    conf_map[_mask] = -10000.0
-
-    conf_map_1 = torch.softmax(args.beta1 * conf_map, dim=-2)
-    conf_map_2 = torch.softmax(args.beta1 * conf_map, dim=-1)
-    conf_map_mul = conf_map_1 * conf_map_2
-    conf_map_mul = conf_map_mul[~_mask].view(B, C, -1)  # --> B, C, kT
-    # conf_map_mul = conf_map_mul.view(B, C, -1)
-
-    # conf_map_reduced = (conf_map.view(B, C, -1) * conf_map_mul).sum(-1) / (
-    #     conf_map_mul.sum(-1) + 1e-8
-    # )
-
-    # milloss = -torch.mean(
-    #     labels * torch.log_softmax(conf_map_reduced, dim=-1)
-    # )
-
-    if torch.isnan(milloss):
-        import pdb
-
-        pdb.set_trace()
-
-    return milloss
-
-
-def metric_function_class(X1, X2):
-    # input: N_sim, C
-    N_sim, C = X1.shape
-    X1_expand = X1.unsqueeze(1).expand(N_sim, N_sim, C)
-    X2_expand = X2.unsqueeze(0).expand(N_sim, N_sim, C)
-    # X1, X2: N_sim1, N_sim2, C
-
-    dis_mat_s = 1 - torch.cosine_similarity(
-        X1_expand[..., : C // 4], X2_expand[..., : C // 4], dim=-1
-    )
-    dis_mat_m = 1 - torch.cosine_similarity(
-        X1_expand[..., C // 4 : -C // 4],
-        X2_expand[..., C // 4 : -C // 4],
-        dim=-1,
-    )
-    dis_mat_e = 1 - torch.cosine_similarity(
-        X1_expand[..., -C // 4 :], X2_expand[..., -C // 4 :], dim=-1
-    )
-    dis_mat = (dis_mat_e + dis_mat_s + dis_mat_m) / 3
-    return dis_mat.squeeze(-1)  # --> N_sim1, N_sim2, 1
-
-
-def metric_function(X1, X2, labels):
-
-    # X1: B1, Nc1, C
-    # X2: B2, Nc2, C
-    B1, Nc1, C = X1.shape
-    B2, Nc2, C = X2.shape
-
-    # reshape
-    # X1_expand : B1, B2, Nc1, Nc2, C
-    # X2_expand : B1, B2, Nc1, Nc2, C
-    X1_expand = X1[:, None, :, None].expand(B1, B2, Nc1, Nc2, C)
-    X2_expand = X2[None, :, None, :].expand(B1, B2, Nc1, Nc2, C)
-
-    # dis : B1, B2, Nc1, Nc2
-    dis_mat_s = 1 - torch.cosine_similarity(
-        X1_expand[..., : C // 4], X2_expand[..., : C // 4], dim=-1
-    )
-    dis_mat_m = 1 - torch.cosine_similarity(
-        X1_expand[..., C // 4 : -C // 4],
-        X2_expand[..., C // 4 : -C // 4],
-        dim=-1,
-    )
-    dis_mat_e = 1 - torch.cosine_similarity(
-        X1_expand[..., -C // 4 :], X2_expand[..., -C // 4 :], dim=-1
-    )
-    dis_mat = (dis_mat_e + dis_mat_s + dis_mat_m) / 3
-
-    # mask
-    mask = torch.ones(dis_mat.shape)
-    mask = mask.permute(2, 3, 0, 1).triu(diagonal=1).permute(2, 3, 0, 1)
-    mask_lab = labels.view(B1, 1, Nc1, 1) * labels.view(1, B2, 1, Nc2)
-    mask = mask * mask_lab
-    # --> B1, B2, Nc1, Nc2
-
-    mask_same = (mask * torch.eye(Nc1)[None, None, ...]) > 0
-    mask_diff = (mask * torch.ones(Nc1, Nc2).triu(diagonal=1)) > 0
-
-    dis_similar = torch.mean(
-        torch.masked_select(dis_mat, mask_same.to(dis_mat.device))
-    )
-    dis_dissimilar = torch.mean(
-        torch.masked_select(dis_mat, mask_diff.to(dis_mat.device))
-    )
-
-    return dis_similar, dis_dissimilar
-
-
-def metric_loss_function(
-    conf_map, attention_map, x_feat, labels, device, args
-):
-    # conf_map: (B, cls, T, T)
-    # x_feat: (B, 3*C, T, T)
-
-    eps = 1e-8
-    B, N_c, *_ = conf_map.shape
-    _, C, *_ = x_feat.shape
-
-    conf_map_1 = torch.triu(torch.softmax(args.beta1 * conf_map, dim=-2), diagonal=1)
-    conf_map_2 = torch.triu(torch.softmax(args.beta1 * conf_map, dim=-1), diagonal=1)
-    conf_map_mul = conf_map_1 * conf_map_2 * attention_map
-    Conf = conf_map_mul.reshape(B, N_c, -1)
-
-
-    x_feat = x_feat.reshape(B, C, -1)
-
-    x_avg_feat = (Conf.unsqueeze(2) * x_feat.unsqueeze(1)).sum(-1) / (
-        Conf.unsqueeze(2).sum(dim=-1) + eps
-    )  # B, N_c, 1, -1 x B, 1, C, -1 --> B, N_c, C
-
-    x_avg_feat_neg = (Conf.unsqueeze(2) * x_feat.unsqueeze(1)).sum(-1) / (
-        Conf.unsqueeze(2).sum(dim=-1) + eps
-    )  # B, N_c, 1, -1 x B, 1, C, -1 --> B, N_c, C
-
-    X_cls = torch.Tensor()
-
-    dis_list_sim = torch.Tensor()
-
-    for i in range(0, args.num_similar * args.similar_size, args.similar_size):
-
-        lab = labels[i, :]
-        for k in range(i + 1, i + args.similar_size):
-            lab = lab * labels[k, :]
-
-        common_ind = lab.nonzero().squeeze(-1)[0]
-
-        Xh = torch.Tensor()
-        for k in range(i, i + args.similar_size):
-            _xh = x_avg_feat[i, [common_ind]]
-            Xh = torch.cat([Xh, _xh], dim=0)
-
-        X_cls = torch.cat([X_cls, Xh.mean(dim=0, keepdim=True)], dim=0)
-
-        mat_similar = metric_function_class(Xh, Xh)  # --> N_sim, N_sim
-
-        triu_mask = torch.triu(torch.ones_like(mat_similar), diagonal=1)
-        _dis_sim = torch.mean(mat_similar[triu_mask > 0], keepdim=True, dim=0)
-        dis_list_sim = torch.cat([dis_list_sim, _dis_sim])
-
-    # X_cls: N_simsize, C
-    mat_diff = metric_function_class(X_cls, X_cls)  # --> N_simsize, N_simsize
-    triu_mask = torch.triu(torch.ones_like(mat_diff), diagonal=1)
-
-    dis_diff = torch.mean(mat_diff[triu_mask > 0])
-    dis_sim = torch.mean(dis_list_sim)
-    loss = torch.max(
-        dis_sim - dis_diff + args.dis, torch.tensor(0.0).to(device)
-    )
-
-    return loss
-
-
-def Sim_Loss(conf_map, attention_map, x_feat, labels, device, args):
-    # conf_map: (B, cls, T, T)
-    # x_feat: (B, 3*C, T, T)
-
-    eps = 1e-8
-    B, N_c, *_ = conf_map.shape
-    _, C, *_ = x_feat.shape
-
-    conf_map_1 = torch.triu(torch.softmax(conf_map, dim=-2), diagonal=1)
-    conf_map_2 = torch.triu(torch.softmax(conf_map, dim=-1), diagonal=1)
-    conf_map_mul = conf_map_1 * conf_map_2 * attention_map
-
-    Conf = conf_map_mul.reshape(B, N_c, -1)
-    x_feat = x_feat.reshape(B, C, -1)
-
-    x_avg_feat = (Conf.unsqueeze(2) * x_feat.unsqueeze(1)).sum(-1) / (
-        Conf.unsqueeze(2).sum(dim=-1) + eps
-    )  # B, N_c, 1, -1 x B, 1, C, -1 --> B, N_c, C
-
-    dis_sim, dis_dissim = metric_function(x_avg_feat, x_avg_feat, labels)
-
-    loss = torch.sum(
-        torch.max(
-            dis_sim - dis_dissim + args.dis, torch.tensor(0.0).to(device)
-        )
-    )
-    return loss
 
 
 def t_val(x):
@@ -255,43 +48,24 @@ def t_val(x):
             return x.data.numpy()
 
 
-def train_bmn(itr, dataset, args, model, optimizer, logger, device):
+def train(itr, dataset, args, model, optimizer, logger, device):
     model.train()
     features, labels = dataset.load_data(
         n_similar=args.num_similar, similar_size=args.similar_size
     )
     seq_len = np.sum(np.max(np.abs(features), axis=2) > 0, axis=1)
-    # features = features[:, : np.max(seq_len), :]
+    features = features[:, : np.max(seq_len), :]
 
     features = torch.from_numpy(features).float().to(device)
     labels = torch.from_numpy(labels).float().to(device)
 
-    cls_logit, cls_fg, x_feat = model(features)
-    # --> (B, cls, T), (B, cls, T, T), (C, 3*C, T, T)
-    milloss = MILL_atn(cls_fg.squeeze(-1), seq_len, labels, device)
-    # milloss = MILL(cls_logit.permute(0, 2, 1), seq_len, labels, device)
-    # milloss = MIL_BMN(conf_map, seq_len, labels, device, args)
-    # metric_loss = metric_loss_function(
-    #     conf_map, attention_map, x_feat, labels, device, args
-    # )
-
-    # L1loss = torch.sum(attention_map) / (
-    #     attention_map.shape[0]
-    #     * attention_map.shape[1]
-    #     * attention_map.shape[2]
-    #     * attention_map.shape[3]
-    # )
+    elements_cls, elements_atn = model(features)
+    # --> (B, cls+1, T), (B, 1, T)
+    milloss = MILL_atn(elements_cls, elements_atn, seq_len, labels, device)
 
     total_loss = milloss  #+ args.gamma * metric_loss + args.gamma2 * L1loss
 
-    # logger.add_scalar("milloss", milloss, itr)
-    # logger.add_scalar("total_loss", total_loss, itr)
-
     print("Iteration: %d, Loss: %.4f" % (itr, total_loss.data.cpu().numpy()))
-    # print(
-    #     f"Iteration: {itr:>10d} -  {t_val(milloss): .6f} + {t_val(metric_loss):.4f} "
-    #     + f"+ {t_val(L1loss):.4f}"
-    # )
 
     optimizer.zero_grad()
     total_loss.backward()

@@ -3,7 +3,7 @@ import os
 import torch
 import torch.optim as optim
 
-from model import Model_orig as Model
+from model import Custom as Model
 import options
 
 # from model import Model
@@ -27,7 +27,7 @@ if __name__ == "__main__":
         os.makedirs("./logs/" + args.model_name)
     logger = SummaryWriter("./logs/" + args.model_name)
 
-    model = Model(dataset.feature_size, dataset.num_class)
+    model = Model(args)
 
     # if torch.cuda.device_count() > 1:
     #     model = torch.nn.DataParallel(model)
@@ -41,7 +41,7 @@ if __name__ == "__main__":
     )
 
     if args.pretrained_ckpt is not None:
-        checkpoint = torch.load(args.pretrained_ck5pt)
+        checkpoint = torch.load(args.pretrained_ckpt)
         if type(model) == torch.nn.DataParallel:
             model.module.load_state_dict(checkpoint["model_state_dict"])
         else:
@@ -56,8 +56,7 @@ if __name__ == "__main__":
     best_dmap_itr = (0, init_itr)
     for itr in (range(init_itr, args.max_iter)):
         train(
-            itr, dataset, args, model, optimizer, logger, device,
-            scheduler=lr_scheduler
+            itr, dataset, args, model, optimizer, logger, device
         )
         if itr % 100 == 0:
             if type(model) == torch.nn.DataParallel:

@@ -10,7 +10,7 @@ parser.add_argument(
     default=6,
     help="number of instances in a batch of data (default: 10)",
 )
-parser.add_argument("--model-name", "-m", default="BMN",
+parser.add_argument("--model-name", "-m", default="bsn",
                     help="name to save model")
 parser.add_argument(
     "--pretrained-ckpt", "--ckpt", default=None,

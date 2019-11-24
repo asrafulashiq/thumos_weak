@@ -13,8 +13,10 @@ from eval_detection import ANETdetection
 
 torch.set_default_tensor_type("torch.cuda.FloatTensor")
 
-
+@torch.no_grad()
 def test(itr, dataset, args, model, logger, device):
+
+    model.eval()
 
     done = False
     instance_logits_stack = []
@@ -30,24 +32,17 @@ def test(itr, dataset, args, model, logger, device):
         features, labels, done = dataset.load_data(is_training=False)
         features = torch.from_numpy(features).float().to(device)
 
-        with torch.no_grad():
-            features = features.unsqueeze(0)
-            # _, element_logits = model(Variable(features), is_training=False)
-            element_logits, *_ = model(features)
-            element_logits = element_logits.permute(0, 2, 1)
-            element_logits = element_logits.squeeze(0)
+        features = features.unsqueeze(0)
+        # _, element_logits = model(Variable(features), is_training=False)
+        element_cls, element_atn = model(features)
+        y_cls = (element_cls * element_atn).sum(-1) / element_atn.shape[-1]
+        y_cls = y_cls.squeeze()
+        element_logits = (element_cls * element_atn).permute(0, 2, 1)
+        element_logits = element_logits.squeeze(0)[..., 1:]
         tmp = (
             F.softmax(
-                torch.mean(
-                    torch.topk(
-                        element_logits,
-                        k=int(np.ceil(len(features) / args.topk)),
-                        dim=0,
-                    )[0],
-                    dim=0,
-                ),
-                dim=0,
-            )
+                y_cls, -1
+            )[1:]  # omit the background class
             .cpu()
             .data.numpy()
         )
@@ -65,7 +60,7 @@ def test(itr, dataset, args, model, logger, device):
     dmap_detect = ANETdetection(dataset.path_to_annotations, iou, args=args)
     dmap_detect._import_prediction(element_logits_stack)
     dmap = dmap_detect.evaluate()
-    dmap_detect.save_info("info.pkl")
+    # dmap_detect.save_info("info.pkl")
 
     if args.dataset_name == "Thumos14":
         test_set = sio.loadmat("test_set_meta.mat")["test_videos"][0]
