@@ -127,9 +127,11 @@ def test_bmn(itr, dataset, args, model, logger, device):
 
     segment_predict =  []
     for features, labels, idx in tqdm(dataset.load_test()):
+        ind_stack.append(idx)
 
         features_in, flag = utils.len_extract(features, args.max_seqlen)
 
+        # features_in = features
         features_in = torch.from_numpy(features_in).float().to(device)
         features_in = features_in.unsqueeze(0)
 
@@ -187,11 +189,11 @@ def test_bmn(itr, dataset, args, model, logger, device):
         # labels_stack.append(labels)
 
         # ind_stack.append(idx)
-        # counter += 1
         # # pbar.update()
 
-        # if counter > 5:
-        #     break
+        counter += 1
+        if counter > 5:
+            break
 
     instance_logits_stack = np.array(instance_logits_stack)
     labels_stack = np.array(labels_stack)
@@ -199,8 +201,8 @@ def test_bmn(itr, dataset, args, model, logger, device):
     # dmap_detect._import_prediction_bmn(segment_predict)
     dmap_detect._import_prediction(element_logits_stack)
 
-    # new_pred = video_post_process(dmap_detect.prediction, dmap_detect.video_info)
-    # dmap_detect.prediction = new_pred
+    new_pred = video_post_process(dmap_detect.prediction, dmap_detect.video_info)
+    dmap_detect.prediction = new_pred
 
     dmap = dmap_detect.evaluate(ind_to_keep=ind_stack)
 

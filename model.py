@@ -112,12 +112,12 @@ class Custom_BMN(nn.Module):
         y_atn = self.conv_atn(x_feature)  # --> B, 1, T
 
         # bmn class --> B, 3*cls, T, T
-        if is_training:
-            bmn_class = self._boundary_matching_layer(y_class, self.sample_mask, self.tscale)
-        else:
-            # sample_mask = self._get_interp1d_mask(T)
-            bmn_class = self._boundary_matching_layer(y_class, self.sample_mask, self.tscale)
-
+        # if is_training:
+        #     bmn_class = self._boundary_matching_layer(y_class, self.sample_mask, self.tscale)
+        # else:
+        #     # sample_mask = self._get_interp1d_mask(T)
+        #     bmn_class = self._boundary_matching_layer(y_class, self.sample_mask, self.tscale)
+        bmn_class = None
         # bmn_strt, bmn_mid, bmn_end = (
         #     bmn_class[:, :self.n_class],
         #     bmn_class[:, self.n_class: -self.n_class],
