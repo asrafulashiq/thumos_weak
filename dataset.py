@@ -6,22 +6,35 @@ np.random.seed(0)
 
 
 class Dataset:
-    def __init__(self, args, mode='both'):
+    def __init__(self, args, mode="both"):
         self.dataset_name = args.dataset_name
         self.num_class = args.num_class
         self.feature_size = args.feature_size
         self.path_to_features = self.dataset_name + "-I3D-JOINTFeatures.npy"
         self.path_to_annotations = self.dataset_name + "-Annotations/"
-        self.features = np.load(self.path_to_features,
-                                encoding="bytes", allow_pickle=True)
-        self.segments = np.load(self.path_to_annotations + "segments.npy", allow_pickle=True)
-        self.labels = np.load(self.path_to_annotations + "labels_all.npy", allow_pickle=True)
+        self.features = np.load(
+            self.path_to_features, encoding="bytes", allow_pickle=True
+        )
+        self.segments = np.load(
+            self.path_to_annotations + "segments.npy", allow_pickle=True
+        )
+        self.labels = np.load(
+            self.path_to_annotations + "labels_all.npy", allow_pickle=True
+        )
         # Specific to Thumos14
 
-        self._labels = np.load(self.path_to_annotations + "labels.npy", allow_pickle=True)
-        self.classlist = np.load(self.path_to_annotations + "classlist.npy", allow_pickle=True)
-        self.subset = np.load(self.path_to_annotations + "subset.npy", allow_pickle=True)
-        self.videonames = np.load(self.path_to_annotations + "videoname.npy", allow_pickle=True)
+        self._labels = np.load(
+            self.path_to_annotations + "labels.npy", allow_pickle=True
+        )
+        self.classlist = np.load(
+            self.path_to_annotations + "classlist.npy", allow_pickle=True
+        )
+        self.subset = np.load(
+            self.path_to_annotations + "subset.npy", allow_pickle=True
+        )
+        self.videonames = np.load(
+            self.path_to_annotations + "videoname.npy", allow_pickle=True
+        )
         self.batch_size = args.batch_size
         # self.batch_size = args.num_similar * args.similar_size
         self.t_max = args.max_seqlen
@@ -30,8 +43,7 @@ class Dataset:
         self.classwiseidx = []
         self.currenttestidx = 0
         self.labels_multihot = [
-            utils.strlist2multihot(labs, self.classlist)
-            for labs in self.labels
+            utils.strlist2multihot(labs, self.classlist) for labs in self.labels
         ]
 
         ambilist = self.path_to_annotations + "/Ambiguous_test.txt"
@@ -40,8 +52,7 @@ class Dataset:
 
         self.num_gt = 5
         self.gt_loc_ind = np.zeros(
-            (len(self.classlist), self.num_gt,
-             self.feature_size), dtype=np.float32
+            (len(self.classlist), self.num_gt, self.feature_size), dtype=np.float32
         )
         self.train_test_idx()
         self.classwise_feature_mapping()
@@ -50,7 +61,7 @@ class Dataset:
 
         self.normalize = False
         self.mode = mode
-        if mode == 'rgb' or mode == 'flow':
+        if mode == "rgb" or mode == "flow":
             self.feature_size = 1024
 
     def get_gt_for_sup(self):
@@ -61,26 +72,27 @@ class Dataset:
             for idx in self.testidx:
                 if label in self._labels[idx]:
                     lab_indices = [
-                        i for i, _l in enumerate(self._labels[idx])
-                        if _l == label
+                        i for i, _l in enumerate(self._labels[idx]) if _l == label
                     ]
                     ind = random.choice(lab_indices)
                     s, e = self.segments[idx][ind]
                     s, e = round(s * 25 / 16), round(e * 25 / 16)
 
-                    tmp = self.features[idx][s: e + 1]
+                    tmp = self.features[idx][s : e + 1]
                     if tmp.size == 0:
                         continue
 
                     self.gt_loc_ind[cls_pos][cnt] = np.mean(tmp, 0)
                     if np.isnan(self.gt_loc_ind[cls_pos]).any():
                         import pdb
+
                         pdb.set_trace()
                     cnt += 1
                     if cnt >= self.num_gt:
                         break
             if cnt < self.num_gt:
                 import pdb
+
                 pdb.set_trace()
             self.gt_loc_ind[cls_pos] = self.gt_loc_ind[cls_pos] / cnt
         self.feat_loc = np.mean(self.gt_loc_ind, axis=1)
@@ -90,10 +102,7 @@ class Dataset:
             ind = np.random.choice(
                 range(self.num_gt), size=len(self.classlist), replace=True
             )
-            feat = self.gt_loc_ind[
-                list(range(len(self.classlist))),
-                ind
-            ]
+            feat = self.gt_loc_ind[list(range(len(self.classlist))), ind]
             return feat
         else:
             return self.feat_loc
@@ -137,23 +146,23 @@ class Dataset:
             # if self.batch_size-similar_size*n_similar < 0:
             #     self.batch_size = similar_size*n_similar
 
-            rand_sampleid = np.random.choice(
-                len(self.trainidx),
-                size=self.batch_size)
+            rand_sampleid = np.random.choice(len(self.trainidx), size=self.batch_size)
 
             for r in rand_sampleid:
                 idx.append(self.trainidx[r])
 
             feat = np.array(
-                [utils.process_feat(
-                    self.features[i], self.t_max, self.normalize) for i in idx]
+                [
+                    utils.process_feat(self.features[i], self.t_max, self.normalize)
+                    for i in idx
+                ]
             )
             labels = np.array([self.labels_multihot[i] for i in idx])
 
-            if self.mode == 'rgb':
-                feat = feat[..., :self.feature_size]
-            elif self.mode == 'flow':
-                feat = feat[..., self.feature_size:]
+            if self.mode == "rgb":
+                feat = feat[..., : self.feature_size]
+            elif self.mode == "flow":
+                feat = feat[..., self.feature_size :]
             return feat, labels
 
         else:
@@ -169,10 +178,10 @@ class Dataset:
                 self.currenttestidx += 1
 
             feat = np.array(feat)
-            if self.mode == 'rgb':
-                feat = feat[..., :self.feature_size]
-            elif self.mode == 'flow':
-                feat = feat[..., self.feature_size:]
+            if self.mode == "rgb":
+                feat = feat[..., : self.feature_size]
+            elif self.mode == "flow":
+                feat = feat[..., self.feature_size :]
             return feat, np.array(labs), done
 
     def load_test(self, *args, **kwargs):
@@ -189,17 +198,19 @@ class Dataset:
             #     self.currenttestidx += 1
 
             feat = np.array(feat)
-            if self.mode == 'rgb':
-                feat = feat[..., :self.feature_size]
-            elif self.mode == 'flow':
-                feat = feat[..., self.feature_size:]
+            if self.mode == "rgb":
+                feat = feat[..., : self.feature_size]
+            elif self.mode == "flow":
+                feat = feat[..., self.feature_size :]
             yield feat, np.array(labs), i
 
     def load_valid(self):
         indices = np.random.choice(self.testidx, size=self.batch_size)
         data = np.array(
-            [utils.process_feat(self.features[i], self.t_max,
-                                self.normalize) for i in indices]
+            [
+                utils.process_feat(self.features[i], self.t_max, self.normalize)
+                for i in indices
+            ]
         )
         labels = np.array([self.labels_multihot[i] for i in indices])
         return data, labels

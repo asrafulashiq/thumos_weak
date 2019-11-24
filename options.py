@@ -27,7 +27,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--max-seqlen",
-    default=60,
+    default=100,
     type=int,
     help="maximum sequence length during training (default: 750)",
 )

@@ -66,6 +66,6 @@ class Custom(nn.Module):
         x_feature = self.conv_1d_b(x)  # --> B, C, T
 
         y_class = self.conv_class(x_feature)  # --> B, cls, T
-        y_atn = self.conv_atn(x_feature)  # --> B, 1, T
+        y_atn = torch.sigmoid(self.conv_atn(x_feature))  # --> B, 1, T
         return y_class, y_atn
 

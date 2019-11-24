@@ -29,13 +29,18 @@ def MILL_atn(elements_cls, elements_atn, seq_len, labels, device):
     # --> B, cls+1
     x_fg_cls = (elements_atn * elements_cls).sum(-1) / elements_cls.shape[-1]
 
-    milloss = -torch.mean(
+    milloss_fg = -torch.mean(
         torch.sum(
-            labels * F.log_softmax(x_fg_cls, dim=1)[:, 1:], dim=1
+            labels * F.log_softmax(x_fg_cls, dim=1)[..., 1:], dim=1
         ),
         dim=0,
     )
-    return milloss
+
+    x_bg_cls = ((1-elements_atn) * elements_cls).sum(-1) / elements_cls.shape[-1]
+    milloss_bg = -torch.mean(F.log_softmax(x_bg_cls, 1)[..., 0])
+
+    loss = milloss_fg + 0.1 * milloss_bg
+    return loss
 
 
 def t_val(x):
