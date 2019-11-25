@@ -23,6 +23,18 @@ def MILL(element_logits, seq_len, labels, device):
     )
     return milloss
 
+def smooth_tensor(x, dim=-1):
+    b, c, l = x.shape
+    sigma = 3
+    gx = np.arange(-sigma, sigma + 1)
+    k_gauss = np.exp(-gx**2/(2.*(sigma/3.)**2))
+    k_gauss = k_gauss / k_gauss.sum()
+    kernel = torch.FloatTensor(k_gauss).reshape(1, 1, -1).repeat(c, 1, 1)
+    # Create input
+    x_smooth = F.conv1d(x, kernel, groups=c, padding=sigma)
+    return x_smooth
+
+
 def MILL_atn(elements_cls, elements_atn, seq_len, labels, device):
     labels = labels / torch.sum(labels, dim=1, keepdim=True)
 
