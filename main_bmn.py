@@ -9,10 +9,10 @@ import options
 
 # from model import Model
 from test_bmn import test_bmn
-from test import test
+# from test import test
 from train import train_bmn
 from dataset import Dataset
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 
@@ -77,12 +77,9 @@ if __name__ == "__main__":
             lr_scheduler.step(np.mean(_loss))
             list_loss = []
 
-        if itr % 100 == 0:
-            if itr % 500 == 0:
-                args.test = True
+        if itr % 200 == 0:
             print("Iter: {}".format(itr))
             dmap = test_bmn(itr, dataset, args, model, logger, device)
-            args.test = False
 
     print("\n\n")
     # print(

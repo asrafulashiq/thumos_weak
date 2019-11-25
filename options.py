@@ -10,7 +10,7 @@ parser.add_argument(
     default=6,
     help="number of instances in a batch of data (default: 10)",
 )
-parser.add_argument("--model-name", "-m", default="bsn",
+parser.add_argument("--model-name", "-m", default="bmn",
                     help="name to save model")
 parser.add_argument(
     "--pretrained-ckpt", "--ckpt", default=None,
@@ -56,7 +56,7 @@ parser.add_argument(
 
 parser.add_argument("--dis", type=float, default=0.5, help="distance thres")
 
-parser.add_argument("--num-sample", type=float, default=16)
+parser.add_argument("--num-sample", type=int, default=16)
 
 parser.add_argument("--test", action='store_true')
 

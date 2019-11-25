@@ -96,3 +96,29 @@ def train(itr, dataset, args, model, optimizer, logger, device):
     optimizer.step()
 
     return total_loss.data.cpu().numpy()
+
+
+def train_bmn(itr, dataset, args, model, optimizer, logger, device):
+    model.train()
+    features, labels = dataset.load_data(
+        n_similar=args.num_similar, similar_size=args.similar_size
+    )
+    seq_len = np.sum(np.max(np.abs(features), axis=2) > 0, axis=1)
+    features = features[:, : np.max(seq_len), :]
+
+    features = torch.from_numpy(features).float().to(device)
+    labels = torch.from_numpy(labels).float().to(device)
+
+    elements_cls, elements_atn, bmn_class = model(features)
+    # --> (B, cls+1, T), (B, 1, T)
+    milloss = MILL_atn(elements_cls, elements_atn, seq_len, labels, device)
+
+    total_loss = milloss  #+ args.gamma * metric_loss + args.gamma2 * L1loss
+
+    print("Iteration: %d, Loss: %.4f" % (itr, total_loss.data.cpu().numpy()))
+
+    optimizer.zero_grad()
+    total_loss.backward()
+    optimizer.step()
+
+    return total_loss.data.cpu().numpy()
