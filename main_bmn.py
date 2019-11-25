@@ -82,5 +82,3 @@ if __name__ == "__main__":
             dmap = test_bmn(itr, dataset, args, model, logger, device)
 
     print("\n\n")
-    # print(
-    #  f"Best Detection mAP : {best_dmap_itr[0]:.3f} @iter {best_dmap_itr[1]}")

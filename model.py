@@ -75,7 +75,7 @@ class Custom_BMN(nn.Module):
     def __init__(self, args):
         super().__init__()
         self.seq_len = args.max_seqlen
-        self.tscale = args.max_seqlen // 4
+        self.tscale = min(args.max_seqlen // 4, 100)
         self.prop_boundary_ratio = 0.25
         self.num_sample = args.num_sample
         self.num_sample_perbin = 1
@@ -137,7 +137,7 @@ class Custom_BMN(nn.Module):
         y_class = self.conv_class(x_feature)  # --> B, cls, T
         y_atn = (self.conv_atn(x_feature))  # --> B, 1, T
         
-        bmn_class = None
+        # bmn_class = self._boundary_matching_layer(y_class, )
 
         return y_class, y_atn, bmn_class
 
