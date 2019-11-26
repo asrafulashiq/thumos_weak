@@ -53,7 +53,7 @@ class Custom(nn.Module):
         )
 
         # classification module
-        self.conv_class = nn.Conv1d(self.hidden_dim_1d, self.n_class+1, 1, bias=False)
+        self.conv_class = nn.Conv1d(self.hidden_dim_1d, self.n_class + 1, 1, bias=False)
 
         # attention module
         self.conv_atn = nn.Conv1d(self.hidden_dim_1d, 1, 3, padding=1)
@@ -66,16 +66,23 @@ class Custom(nn.Module):
         x_feature = self.conv_1d_b(x)  # --> B, C, T
 
         y_class = self.conv_class(x_feature)  # --> B, cls, T
-        y_atn = (self.conv_atn(x_feature))  # --> B, 1, T
+        y_atn = self.conv_atn(x_feature)  # --> B, 1, T
         return y_class, y_atn
-
 
 
 class Custom_BMN(nn.Module):
     def __init__(self, args):
         super().__init__()
         self.seq_len = args.max_seqlen
+
+        # TODO: change it if necessary, currently set to 1/4 of total length
         self.tscale = min(args.max_seqlen // 4, 50)
+
+        # TODO: pad size, change if necessary
+        self.pad = self.tscale // 4
+
+        self.seq_len_pad = self.seq_len + 2 * self.pad
+
         self.prop_boundary_ratio = 0.25
         self.num_sample = args.num_sample
         self.num_sample_perbin = 1
@@ -86,7 +93,7 @@ class Custom_BMN(nn.Module):
 
         self.n_class = args.num_class
 
-        self.sample_mask = self._get_interp1d_mask(self.seq_len, self.tscale)
+        self.sample_mask = self._get_interp1d_mask(self.seq_len_pad, self.tscale)
 
         # Base Module
         self.conv_1d_b = nn.Sequential(
@@ -96,11 +103,10 @@ class Custom_BMN(nn.Module):
         )
 
         # classification module
-        self.conv_class = nn.Conv1d(self.hidden_dim_1d, self.n_class+1, 1, bias=False)
+        self.conv_class = nn.Conv1d(self.hidden_dim_1d, self.n_class + 1, 1, bias=False)
 
         # attention module
         self.conv_atn = nn.Conv1d(self.hidden_dim_1d, 1, 3, padding=1)
-
 
         # Proposal Evaluation Module
         # self.conv_2d_p = nn.Sequential(
@@ -132,11 +138,13 @@ class Custom_BMN(nn.Module):
     def forward(self, x, is_training=True):
         x = x.permute(0, 2, 1)  # B, C, T
         B, C, T = x.shape
-        x_feature = self.conv_1d_b(x)  # --> B, C, T
 
-        y_class = self.conv_class(x_feature)  # --> B, cls, T
-        y_atn = self.conv_atn(x_feature)  # --> B, 1, T
-        
+        x_pad = F.pad(x, (self.pad, self.pad))  # B, C, T'
+        x_feature = self.conv_1d_b(x_pad)  # --> B, C, T'
+
+        y_class = self.conv_class(x_feature)  # --> B, cls, T'
+        y_atn = self.conv_atn(x_feature)  # --> B, 1, T'
+
         # if is_training:
         #     bmn_class = self._boundary_matching_layer(y_class, self.sample_mask, self.seq_len, self.tscale)
         # else:
@@ -144,7 +152,13 @@ class Custom_BMN(nn.Module):
         #     sample_mask = self._get_interp1d_mask(T, tscale)
         #     bmn_class = self._boundary_matching_layer(y_class, sample_mask, T, tscale)
         # bmn_class = None
-        bmn_class = self._boundary_matching_layer(y_class, self.sample_mask, self.seq_len, self.tscale)
+
+        bmn_class = self._boundary_matching_layer(
+            y_class, self.sample_mask, self.seq_len_pad, self.tscale
+        )  # --> B, 3, -1, D, T'
+        bmn_class = bmn_class[..., self.pad: -self.pad]  # --> ..., T
+        y_class = y_class[..., self.pad: -self.pad]  # --> ..., T
+        y_atn = y_atn[..., self.pad: -self.pad]  # --> ..., T
 
         return y_class, y_atn, bmn_class
 
@@ -152,14 +166,12 @@ class Custom_BMN(nn.Module):
         input_size = x.size()  # B, C, T
 
         # (B, C, T) x (T, N x D x T) --> B, C, N , D , T
-        out = torch.matmul(x, sample_mask).reshape(
+        out = torch.matmul(x, sample_mask.view(self.sample_mask.shape[0], -1)).reshape(
             input_size[0], input_size[1], self.num_sample, tscale, seq_len
         )
 
         out_start = torch.mean(out[:, :, : self.num_sample // 4], dim=2)
-        out_mid = torch.mean(
-            out[:, :, self.num_sample // 4 : -self.num_sample // 4], dim=2
-        )
+        out_mid = torch.mean(out[:, :, self.num_sample // 4 : -self.num_sample // 4], dim=2)
         out_end = torch.mean(out[:, :, -self.num_sample // 4 :], dim=2)
         # each dim: B, C, D, T
 
@@ -173,12 +185,11 @@ class Custom_BMN(nn.Module):
         plen = float(seg_xmax - seg_xmin)
         plen_sample = plen / (num_sample * num_sample_perbin - 1.0)
         total_samples = [
-            seg_xmin + plen_sample * ii
-            for ii in range(num_sample * num_sample_perbin)
+            seg_xmin + plen_sample * ii for ii in range(num_sample * num_sample_perbin)
         ]
         p_mask = []
         for idx in range(num_sample):
-            bin_samples = total_samples[idx * num_sample_perbin:(idx + 1) * num_sample_perbin]
+            bin_samples = total_samples[idx * num_sample_perbin : (idx + 1) * num_sample_perbin]
             bin_vector = np.zeros([tscale])
             for sample in bin_samples:
                 sample_upper = math.ceil(sample)
@@ -205,8 +216,8 @@ class Custom_BMN(nn.Module):
                     sample_xmin = p_xmin - center_len * self.prop_boundary_ratio
                     sample_xmax = p_xmax + center_len * self.prop_boundary_ratio
                     p_mask = self._get_interp1d_bin_mask(
-                        sample_xmin, sample_xmax, seq_len, self.num_sample,
-                        self.num_sample_perbin)
+                        sample_xmin, sample_xmax, seq_len, self.num_sample, self.num_sample_perbin
+                    )
                 else:
                     p_mask = np.zeros([seq_len, self.num_sample])
                 mask_mat_vector.append(p_mask)
@@ -216,18 +227,18 @@ class Custom_BMN(nn.Module):
         mask_mat = mask_mat.astype(np.float32)  # (T x N) x D x T
         if with_tensor:
             sample_mask = torch.Tensor(mask_mat)
-            sample_mask = sample_mask.view(seq_len, -1)
+            # sample_mask = sample_mask.view(seq_len, -1)
         else:
             sample_mask = mask_mat
         return sample_mask
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import options
+
     opt = options.parser.parse_args()
     model = Custom_BMN(opt)
     # print(model.sample_mask.shape)
-
 
     # save sample_mask for different shapes
     from dataset import Dataset
