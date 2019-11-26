@@ -100,3 +100,5 @@ def write_to_file(dname, dmap, cmap, itr):
     string_to_write += " " + "%.2f" % cmap
     fid.write(string_to_write + "\n")
     fid.close()
+
+

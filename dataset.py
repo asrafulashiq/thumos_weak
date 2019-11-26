@@ -235,7 +235,7 @@ class Dataset:
         for i, idx in enumerate(self.testidx):
             labs = self.labels_multihot[idx]
             feat = self.features[idx]
-            feat = utils.process_feat(feat, normalize=self.normalize)
+            # feat = utils.process_feat(feat, normalize=self.normalize)
 
             if feat.shape[0] > self.t_max:
                 feat_div = self.div_feat(feat)

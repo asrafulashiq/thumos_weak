@@ -1,7 +1,6 @@
 import torch
 import torch.nn.functional as F
 import numpy as np
-from torch.autograd import Variable
 
 
 def MILL(element_logits, seq_len, labels, device):
