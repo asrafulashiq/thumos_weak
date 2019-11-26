@@ -75,7 +75,7 @@ class Custom_BMN(nn.Module):
     def __init__(self, args):
         super().__init__()
         self.seq_len = args.max_seqlen
-        self.tscale = min(args.max_seqlen // 4, 100)
+        self.tscale = min(args.max_seqlen // 4, 50)
         self.prop_boundary_ratio = 0.25
         self.num_sample = args.num_sample
         self.num_sample_perbin = 1
@@ -86,7 +86,7 @@ class Custom_BMN(nn.Module):
 
         self.n_class = args.num_class
 
-        self.sample_mask = self._get_interp1d_mask()
+        self.sample_mask = self._get_interp1d_mask(self.seq_len, self.tscale)
 
         # Base Module
         self.conv_1d_b = nn.Sequential(
@@ -137,7 +137,13 @@ class Custom_BMN(nn.Module):
         y_class = self.conv_class(x_feature)  # --> B, cls, T
         y_atn = (self.conv_atn(x_feature))  # --> B, 1, T
         
-        bmn_class = self._boundary_matching_layer(y_class, self.sample_mask, self.seq_len, self.tscale)
+        # if is_training:
+        #     bmn_class = self._boundary_matching_layer(y_class, self.sample_mask, self.seq_len, self.tscale)
+        # else:
+        #     tscale = min(T // 4, 50)
+        #     sample_mask = self._get_interp1d_mask(T, tscale)
+        #     bmn_class = self._boundary_matching_layer(y_class, sample_mask, T, tscale)
+        bmn_class = None
 
         return y_class, y_atn, bmn_class
 
@@ -185,36 +191,56 @@ class Custom_BMN(nn.Module):
         p_mask = np.stack(p_mask, axis=1)
         return p_mask
 
-    def _get_interp1d_mask(self):
+    def _get_interp1d_mask(self, seq_len, tscale, with_tensor=True):
         # generate sample mask for each point in Boundary-Matching Map
         mask_mat = []
-        for start_index in range(self.seq_len):
+        for start_index in range(seq_len):
             mask_mat_vector = []
-            for duration_index in range(self.tscale):
-                if start_index + duration_index < self.seq_len:
+            for duration_index in range(tscale):
+                if start_index + duration_index < seq_len:
                     p_xmin = start_index
                     p_xmax = start_index + duration_index
                     center_len = float(p_xmax - p_xmin) + 1
                     sample_xmin = p_xmin - center_len * self.prop_boundary_ratio
                     sample_xmax = p_xmax + center_len * self.prop_boundary_ratio
                     p_mask = self._get_interp1d_bin_mask(
-                        sample_xmin, sample_xmax, self.seq_len, self.num_sample,
+                        sample_xmin, sample_xmax, seq_len, self.num_sample,
                         self.num_sample_perbin)
                 else:
-                    p_mask = np.zeros([self.seq_len, self.num_sample])
+                    p_mask = np.zeros([seq_len, self.num_sample])
                 mask_mat_vector.append(p_mask)
             mask_mat_vector = np.stack(mask_mat_vector, axis=2)
             mask_mat.append(mask_mat_vector)
         mask_mat = np.stack(mask_mat, axis=3)
         mask_mat = mask_mat.astype(np.float32)  # (T x N) x D x T
-        sample_mask = torch.Tensor(mask_mat)
-        sample_mask = sample_mask.view(self.seq_len, -1)
+        if with_tensor:
+            sample_mask = torch.Tensor(mask_mat)
+            sample_mask = sample_mask.view(seq_len, -1)
+        else:
+            sample_mask = mask_mat
         return sample_mask
 
 
 if __name__ == '__main__':
     import options
     opt = options.parser.parse_args()
-    model=Custom_BMN(opt)
-    
-    print(model.sample_mask.shape)
+    model = Custom_BMN(opt)
+    # print(model.sample_mask.shape)
+
+
+    # save sample_mask for different shapes
+    from dataset import Dataset
+    from tqdm import tqdm
+
+    # dataset = Dataset(opt, mode='both')
+    # dict_sample_mask = {}
+    # for counter, (features, labels, idx) in tqdm(enumerate(dataset.load_test())):
+    #     seq_len = features.shape[0]
+    #     tscale = min(seq_len//4, 100)
+    #     sample_mask = model._get_interp1d_mask(seq_len, tscale, with_tensor=False)
+    #     if seq_len not in dict_sample_mask:
+    #         dict_sample_mask[seq_len] = sample_mask
+    #     if counter > 5:
+    #         break
+
+    # np.save("sample_mask.npy", dict_sample_mask)

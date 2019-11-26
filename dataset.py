@@ -1,6 +1,8 @@
 import numpy as np
 import utils
 import random
+from sklearn.utils import shuffle as shuffle_list
+
 
 np.random.seed(0)
 
@@ -184,7 +186,12 @@ class Dataset:
                 feat = feat[..., self.feature_size :]
             return feat, np.array(labs), done
 
-    def load_test(self, *args, **kwargs):
+    def load_test(self, shuffle=False, *args, **kwargs):
+        if shuffle:
+            testidx = shuffle_list(self.testidx)
+        else:
+            testidx = self.testidx
+
         for i, idx in enumerate(self.testidx):
             labs = self.labels_multihot[idx]
             feat = self.features[idx]
@@ -203,22 +210,3 @@ class Dataset:
             elif self.mode == "flow":
                 feat = feat[..., self.feature_size :]
             yield feat, np.array(labs), i
-
-    def load_valid(self):
-        indices = np.random.choice(self.testidx, size=self.batch_size)
-        data = np.array(
-            [
-                utils.process_feat(self.features[i], self.t_max, self.normalize)
-                for i in indices
-            ]
-        )
-        labels = np.array([self.labels_multihot[i] for i in indices])
-        return data, labels
-
-    def load_one_test_with_segment(self):
-        for idx in self.testidx:
-            feat = self.features[idx]
-            labs = self._labels[idx]
-            seg = self.segments[idx]
-            vname = self.videonames[idx]
-            yield np.array(feat), np.array(labs), np.array(seg), vname
