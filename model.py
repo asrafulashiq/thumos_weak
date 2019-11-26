@@ -137,16 +137,16 @@ class Custom_BMN(nn.Module):
         y_class = self.conv_class(x_feature)  # --> B, cls, T
         y_atn = (self.conv_atn(x_feature))  # --> B, 1, T
         
-        # bmn_class = self._boundary_matching_layer(y_class, )
+        bmn_class = self._boundary_matching_layer(y_class, self.sample_mask, self.seq_len, self.tscale)
 
         return y_class, y_atn, bmn_class
 
-    def _boundary_matching_layer(self, x, sample_mask, tscale):
+    def _boundary_matching_layer(self, x, sample_mask, seq_len, tscale):
         input_size = x.size()  # B, C, T
 
         # (B, C, T) x (T, N x D x T) --> B, C, N , D , T
         out = torch.matmul(x, sample_mask).reshape(
-            input_size[0], input_size[1], self.num_sample, tscale, tscale
+            input_size[0], input_size[1], self.num_sample, tscale, seq_len
         )
 
         out_start = torch.mean(out[:, :, : self.num_sample // 4], dim=2)
@@ -157,6 +157,8 @@ class Custom_BMN(nn.Module):
         # each dim: B, C, D, T
 
         out = torch.cat((out_start, out_mid, out_end), dim=1)  # B, 3*C, D, T
+        B, _, D, T = out.shape
+        out = out.reshape(B, 3, -1, D, T)
         return out
 
     def _get_interp1d_bin_mask(self, seg_xmin, seg_xmax, tscale, num_sample, num_sample_perbin):
@@ -204,8 +206,9 @@ class Custom_BMN(nn.Module):
             mask_mat_vector = np.stack(mask_mat_vector, axis=2)
             mask_mat.append(mask_mat_vector)
         mask_mat = np.stack(mask_mat, axis=3)
-        mask_mat = mask_mat.astype(np.float32)  # (T x N) x D x T+
-        sample_mask = torch.Tensor(mask_mat).view(self.seq_len, -1)
+        mask_mat = mask_mat.astype(np.float32)  # (T x N) x D x T
+        sample_mask = torch.Tensor(mask_mat)
+        sample_mask = sample_mask.view(self.seq_len, -1)
         return sample_mask
 
 

@@ -9,7 +9,7 @@ from joblib import Parallel, delayed
 from scipy.signal import savgol_filter
 import sys
 import scipy.io as sio
-
+from tqdm import tqdm
 from utils_eval import get_blocked_videos
 from utils_eval import interpolated_prec_rec
 from utils_eval import segment_iou
@@ -48,7 +48,9 @@ def iou_with_anchors(anchors_min, anchors_max, box_min, box_max):
     int_xmin = np.maximum(anchors_min, box_min)
     int_xmax = np.minimum(anchors_max, box_max)
     inter_len = np.maximum(int_xmax - int_xmin, 0.)
-    union_len = len_anchors - inter_len + box_max - box_min
+    # union_len = len_anchors - inter_len + box_max - box_min
+    # TODO: minimum iou
+    union_len = np.minimum(len_anchors, box_max - box_min)
     # print inter_len,union_len
     jaccard = np.divide(inter_len, union_len)
     return jaccard
@@ -101,18 +103,21 @@ def soft_nms(df, alpha=0.4, t1=0.5, t2=0.9):
     return newDf
 
 
-def _post_process(each_grp, df_groups):
+def _post_process(each_grp, df_groups, video_info=None):
     vid_id = each_grp
     cur_group = df_groups.get_group(each_grp)
     newdf = soft_nms(cur_group)
     newdf.insert(0, "video-id", [vid_id] * newdf.shape[0], True)
-    duration = cur_group["duration"].values[0]
+    if video_info is not None:
+        duration = video_info[video_info["video-id"] == vid_id]["duration"].values[0]
+    else:
+        duration = cur_group["duration"].values[0]
     newdf["t-start"] = np.maximum(newdf["t-start"].values, 0) * duration
     newdf["t-end"] = np.minimum(newdf["t-end"].values, 1) * duration
     return newdf
 
 
-def video_post_process(df, nms=True, parallel=True):
+def video_post_process(df, nms=True, parallel=True, video_info=None):
     # group by video id
     if nms:
         print("applying soft-nms")
@@ -120,14 +125,14 @@ def video_post_process(df, nms=True, parallel=True):
         if parallel:
             list_df = Parallel(n_jobs=10)(
                 delayed(_post_process)(
-                    each_grp, df_groups
+                    each_grp, df_groups, video_info
                 )
                 for each_grp in df_groups.groups.keys()
             )
         else:
             list_df = []
-            for each_grp in df_groups.groups.keys():
-                _val = _post_process(each_grp, df_groups)
+            for each_grp in tqdm(df_groups.groups.keys()):
+                _val = _post_process(each_grp, df_groups, video_info)
                 list_df.append(_val)
 
         mod_df = pd.concat(list_df)
@@ -294,88 +299,10 @@ class ANETdetection(object):
 
 
     def _import_prediction_bmn(self, segment_predict):
-        # pred = []
-        # _len = []
-        # for i, p in enumerate(predictions):
-        #     if i in self.idx_to_take:
-        #         pred.append(p)
-        #         _len.append(len_stack[i])
-        # predictions = pred
-        # len_stack = _len
-
-        # args = self.args
-        # segment_predict = []
-
-        # for c in self.templabelidx:
-        #     for i in range(len(predictions)):
-        #         tmp = predictions[i][c, ...]
-
-        #         if tmp.shape[0] < len_stack[i]:
-        #             mul = len_stack[i] / tmp.shape[0]
-        #         else:
-        #             mul = 1.
-
-        #         if args is None:
-        #             thres = 0.5
-        #         else:
-        #             thres = args.thres
-
-        #         tmp_max = np.max(tmp, -1)
-        #         end_max = np.argmax(tmp, -1)
-
-        #         ind_start = np.where(tmp_max > thres)[0]
-        #         ind_end = end_max[ind_start]
-        #         conf_filtered = tmp_max[ind_start]
-
-        #         if len(conf_filtered) > 0:
-        #             _strt = []
-        #             _end = []
-        #             _conf = []
-        #             for each in np.unique(ind_end):
-        #                 tmp_end = ind_end[ind_end==each]
-        #                 tmp_strt = ind_start[ind_end==each]
-        #                 tmp_conf = conf_filtered[ind_end==each]
-        #                 _ii = np.argmax(tmp_conf)
-        #                 _strt.append(tmp_strt[_ii])
-        #                 _end.append(tmp_end[_ii])
-        #                 _conf.append(tmp_conf[_ii])
-        #             ind_start = _strt
-        #             ind_end = _end
-        #             conf_filtered = _conf
-
-        #         for kk in range(len(conf_filtered)):
-        #             s = ind_start[kk] * mul
-        #             e = ind_end[kk] * mul
-        #             # if e - s >= 2:
-        #             segment_predict.append(
-        #                 [i, round(s), round(e), conf_filtered[kk], int(c)]
-        #             )
-
+        
         segment_predict = np.array(segment_predict)
         # segment_predict = filter_segments(segment_predict, self.videoname, self.ambilist)
 
-        # Read predictions.
-        video_lst, t_start_lst, t_end_lst = [], [], []
-        label_lst, score_lst, dur_lst = [], [], []
-
-        # for i in range(np.shape(segment_predict)[0]):
-        #     video_lst.append(self.videoname[int(segment_predict[i, 0])])
-        #     t_start_lst.append(segment_predict[i, 1])
-        #     t_end_lst.append(segment_predict[i, 2])
-        #     score_lst.append(segment_predict[i, 3])
-        #     label_lst.append(segment_predict[i, 4])
-        #     dur_lst.append(segment_predict[i, 5])
-        
-        # prediction = pd.DataFrame(
-        #     {
-        #         "video-id": video_lst,
-        #         "t-start": t_start_lst,
-        #         "t-end": t_end_lst,
-        #         "label": label_lst,
-        #         "score": score_lst,
-        #         "duration": dur_lst
-        #     }
-        # )
         prediction = pd.DataFrame(
             {
                 "video-id": self.videoname[segment_predict[:, 0].astype(int)],
@@ -437,7 +364,7 @@ class ANETdetection(object):
                 for j in range(len(s)):
                     if e[j] - s[j] >= 2:
                         segment_predict.append(
-                            [i, s[j]/cur_len, e[j]/cur_len, np.max(tmp[s[j] : e[j]]),
+                            [i, s[j]/cur_len, e[j]/cur_len, np.mean(tmp[s[j] : e[j]]),
                             c, duration]
                         )
         segment_predict = np.array(segment_predict)
@@ -488,7 +415,7 @@ class ANETdetection(object):
         ground_truth_by_label = self.ground_truth.groupby("label")
         prediction_by_label = self.prediction.groupby("label")
 
-        results = Parallel(n_jobs=3)(
+        results = Parallel(n_jobs=5)(
             delayed(compute_average_precision_detection)(
                 ground_truth=ground_truth_by_label.get_group(cidx).reset_index(
                     drop=True
@@ -534,7 +461,8 @@ class ANETdetection(object):
             print("\tNumber of predictions: {}".format(nr_pred))
             print("\tFixed threshold for tiou score: {}".format(self.tiou_thresholds))
 
-        self.prediction = video_post_process(self.prediction, nms=False, parallel=False)
+        self.prediction = video_post_process(self.prediction, nms=True, parallel=False,
+                    video_info=self.video_info)
 
         self.ap = self.wrapper_compute_average_precision()
 
