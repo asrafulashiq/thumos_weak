@@ -54,6 +54,8 @@ def len_extract(feat, t_max):
             constant_values=0,
         )
         return _feat, ("pad", feat.shape[0])
+    else:
+        return feat, None
     # else:
         # return feat, None
 

@@ -197,16 +197,50 @@ class Dataset:
             feat = self.features[idx]
             feat = utils.process_feat(feat, normalize=self.normalize)
 
-            # if self.currenttestidx == len(self.testidx) - 1:
-            #     done = True
-            #     self.currenttestidx = 0
-            # else:
-            #     done = False
-            #     self.currenttestidx += 1
-
             feat = np.array(feat)
             if self.mode == "rgb":
                 feat = feat[..., : self.feature_size]
             elif self.mode == "flow":
                 feat = feat[..., self.feature_size :]
             yield feat, np.array(labs), i
+
+    def div_feat(self, feat):
+        flen = feat.shape[0]
+        maxlen = self.t_max
+        overlap_len = int(0.3 * maxlen)
+        total_div = int(np.ceil(flen / (maxlen-overlap_len)))
+
+        s, e = -1, -1
+        feat_div = []
+        for i in range(total_div):
+            if i == 0:
+                s = 0
+            elif i == total_div -1:
+                s = flen - maxlen
+            else:
+                s = i * (maxlen-overlap_len)
+            e = s + maxlen
+
+            feat_div.append(
+                [feat[s: e], [s, e, flen]]
+            )
+        return feat_div
+
+    def load_test_fixed(self, shuffle=False, *args, **kwargs):
+        if shuffle:
+            testidx = shuffle_list(self.testidx)
+        else:
+            testidx = self.testidx
+
+        for i, idx in enumerate(self.testidx):
+            labs = self.labels_multihot[idx]
+            feat = self.features[idx]
+            feat = utils.process_feat(feat, normalize=self.normalize)
+
+            if feat.shape[0] > self.t_max:
+                feat_div = self.div_feat(feat)
+                for each_div in feat_div:
+                    cur_feat, f_range = each_div[0], each_div[1]
+                    yield cur_feat, np.array(labs), i, f_range
+            else:
+                yield feat, np.array(labs), i, [0, feat.shape[0], feat.shape[0]]

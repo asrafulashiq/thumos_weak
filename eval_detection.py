@@ -315,12 +315,12 @@ class ANETdetection(object):
         )
         self.prediction = prediction
 
-    def _import_prediction(self, predictions):
-        pred = []
-        for i, p in enumerate(predictions):
-            if i in self.idx_to_take:
-                pred.append(p)
-        predictions = pred
+    def _import_prediction(self, segment_predict):
+        # pred = []
+        # for i, p in enumerate(predictions):
+        #     if i in self.idx_to_take:
+        #         pred.append(p)
+        # predictions = pred
 
         # process the predictions such that classes having greater than a certain threshold are detected only
         # predictions_mod = []
@@ -337,36 +337,36 @@ class ANETdetection(object):
         #     predictions_mod.append(pind)
 
         # predictions = predictions_mod
-        args = self.args
-        segment_predict = []
+        # args = self.args
+        # segment_predict = []
 
-        for c in self.templabelidx:
-            for i in range(len(predictions)):
+        # for c in self.templabelidx:
+        #     for i in range(len(predictions)):
                 
-                tmp = smooth(predictions[i][:, c])
-                if args is None:
-                    thres = 0.5
-                else:
-                    thres = 1 - args.thres
-                # tmp = np.clip(tmp, a_min=-5, a_max=5)
-                threshold = np.max(tmp) - (np.max(tmp) - np.min(tmp)) * thres
-                vid_pred = np.concatenate(
-                    [np.zeros(1), (tmp > threshold).astype("float32"), np.zeros(1)], axis=0
-                )
-                vid_pred_diff = [
-                    vid_pred[idt] - vid_pred[idt - 1] for idt in range(1, len(vid_pred))
-                ]
-                s = [idk for idk, item in enumerate(vid_pred_diff) if item == 1]
-                e = [idk for idk, item in enumerate(vid_pred_diff) if item == -1]
+        #         tmp = smooth(predictions[i][:, c])
+        #         if args is None:
+        #             thres = 0.5
+        #         else:
+        #             thres = 1 - args.thres
+        #         # tmp = np.clip(tmp, a_min=-5, a_max=5)
+        #         threshold = np.max(tmp) - (np.max(tmp) - np.min(tmp)) * thres
+        #         vid_pred = np.concatenate(
+        #             [np.zeros(1), (tmp > threshold).astype("float32"), np.zeros(1)], axis=0
+        #         )
+        #         vid_pred_diff = [
+        #             vid_pred[idt] - vid_pred[idt - 1] for idt in range(1, len(vid_pred))
+        #         ]
+        #         s = [idk for idk, item in enumerate(vid_pred_diff) if item == 1]
+        #         e = [idk for idk, item in enumerate(vid_pred_diff) if item == -1]
 
-                duration = self.video_info[self.video_info["_id"]==i]["duration"].values[0]
-                cur_len = len(tmp)
-                for j in range(len(s)):
-                    if e[j] - s[j] >= 2:
-                        segment_predict.append(
-                            [i, s[j]/cur_len, e[j]/cur_len, np.mean(tmp[s[j] : e[j]]),
-                            c, duration]
-                        )
+        #         duration = self.video_info[self.video_info["_id"]==i]["duration"].values[0]
+        #         cur_len = len(tmp)
+        #         for j in range(len(s)):
+        #             if e[j] - s[j] >= 2:
+        #                 segment_predict.append(
+        #                     [i, s[j]/cur_len, e[j]/cur_len, np.mean(tmp[s[j] : e[j]]),
+        #                     c, duration]
+        #                 )
         segment_predict = np.array(segment_predict)
         # segment_predict = filter_segments(segment_predict, self.videoname, self.ambilist)
 

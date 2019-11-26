@@ -27,6 +27,8 @@ from tqdm import tqdm
 from eval_detection import ANETdetection
 
 
+# NOTE: dividing long videos into parts and then evaluating seems to work better
+
 @torch.no_grad()
 def test_bmn(itr, dataset, args, model, logger, device):
 
@@ -41,12 +43,11 @@ def test_bmn(itr, dataset, args, model, logger, device):
     iou = [0.1, 0.3, 0.5, 0.7]
     dmap_detect = ANETdetection(dataset.path_to_annotations, iou, args=args)
 
-    for counter, (features, labels, idx) in tqdm(enumerate(dataset.load_test(shuffle=True))):
+    for counter, (features, labels, idx) in tqdm(enumerate(dataset.load_test(shuffle=False))):
 
-        if features.shape[0] > args.max_seqlen:
-            continue
+        # if features.shape[0] > args.max_seqlen:
+        #     continue
 
-        features, labels, done = dataset.load_data(is_training=False)
         # features, flag = utils.len_extract(features, args.max_seqlen)
 
         features = torch.from_numpy(features).float().to(device)
@@ -66,6 +67,36 @@ def test_bmn(itr, dataset, args, model, logger, device):
             .data.numpy()
         )
         element_logits = element_logits.cpu().data.numpy()
+
+        # 1d connected component
+        for c in range(args.num_class):
+            if tmp[c] < 0.1:
+                continue
+            elem = element_logits[:, c]
+            if args is None:
+                thres = 0.5
+            else:
+                thres = 1 - args.thres
+            # tmp = np.clip(tmp, a_min=-5, a_max=5)
+            threshold = np.max(elem) - (np.max(elem) - np.min(elem)) * thres
+            vid_pred = np.concatenate(
+                [np.zeros(1), (elem > threshold).astype("float32"), np.zeros(1)], axis=0
+            )
+            vid_pred_diff = [
+                vid_pred[idt] - vid_pred[idt - 1] for idt in range(1, len(vid_pred))
+            ]
+            s = [idk for idk, item in enumerate(vid_pred_diff) if item == 1]
+            e = [idk for idk, item in enumerate(vid_pred_diff) if item == -1]
+
+            duration = dmap_detect.video_info[dmap_detect.video_info["_id"]==idx]["duration"].values[0]
+            cur_len = len(elem)
+            for j in range(len(s)):
+                if e[j] - s[j] >= 2:
+                    segment_predict.append(
+                        [idx, s[j]/cur_len, e[j]/cur_len, np.mean(elem[s[j] : e[j]]),
+                        c, duration]
+                    )
+        # segment_predict = np.array(segment_predict)
 
         # if flag is not None:
         #     if flag[0] == "pad":
@@ -131,7 +162,7 @@ def test_bmn(itr, dataset, args, model, logger, device):
     labels_stack = np.array(labels_stack)
     
     # dmap_detect._import_prediction_bmn(segment_predict)
-    dmap_detect._import_prediction(element_logits_stack)
+    dmap_detect._import_prediction(segment_predict)
     dmap = dmap_detect.evaluate(ind_to_keep=ind_stack)
     # dmap_detect.save_info("info.pkl")
 
