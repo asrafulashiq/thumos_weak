@@ -68,7 +68,7 @@ parser.add_argument(
     type=int,
     help="number of similar pairs in a batch of data  (default: 3)",
 )
-parser.add_argument("--gamma", type=float, default=1)
+parser.add_argument("--gamma", type=float, default=0.1)
 parser.add_argument("--gamma2", type=float, default=0.5)
 
 parser.add_argument("--beta1", type=float, default=5)

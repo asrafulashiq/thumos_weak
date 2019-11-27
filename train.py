@@ -69,8 +69,11 @@ def refine_bmn_map(bmn_class, elements_cls, labels, device, args):
 
     # gaussian smooth element logit
     elements_cls_smooth = smooth_tensor(elements_cls, dim=-1)
-
     label_ij = labels.nonzero()
+
+    loss_dis = 0
+    counter = 0
+
     for b, cls in label_ij:
         elements_smooth = elements_cls_smooth[b, cls + 1]  # --> (T,)
         conf_map = bmn_class[b, :, cls + 1]  # --> 3, D, T
@@ -113,7 +116,26 @@ def refine_bmn_map(bmn_class, elements_cls, labels, device, args):
 
         keep = soft_nms_pytorch(segment_list, score_list, thresh=threshold)
 
+        if keep.nelement() > 0:
+            inds = segment_list[keep].long()
+            inds[:, 1] = inds[:, 1] - inds[:, 0]  # start, duration
 
+            _left = tmp_conf_score_left[inds[:, 1], inds[:, 0]]
+            _right = tmp_conf_score_right[inds[:, 1], inds[:, 0]]
+            _middle = tmp_conf_score_left[inds[:, 1], inds[:, 0]]
+
+            _l1 = torch.max(2 - _left, torch.FloatTensor([0.]).cuda()).mean()
+            _l2 = torch.max(2 - _right, torch.FloatTensor([0.]).cuda()).mean()
+            _l3 = torch.max(6 - _middle, torch.FloatTensor([0.]).cuda()).mean()
+
+            loss_dis += 1./3 * (_l1 + _l2 + _l3)
+            counter += 1
+    if counter > 0:
+        loss_score = loss_dis / counter
+    else:
+        loss_score = 0
+    return loss_score
+        
 
 def train_bmn(itr, dataset, args, model, optimizer, logger, device):
     model.train()
@@ -130,11 +152,13 @@ def train_bmn(itr, dataset, args, model, optimizer, logger, device):
     # --> (B, cls+1, T), (B, 1, T), (B, 3, cls+1, D, T)
     milloss = MILL_atn(elements_cls, elements_atn, seq_len, labels, device)
 
-    refine_bmn_map(bmn_class, elements_cls, labels, device, args)
+    loss_dis = refine_bmn_map(bmn_class, elements_cls, labels, device, args)
 
-    total_loss = milloss  # + args.gamma * metric_loss + args.gamma2 * L1loss
+    total_loss = milloss + args.gamma * loss_dis  # + args.gamma * metric_loss + args.gamma2 * L1loss
 
-    print("Iteration: %d, Loss: %.4f" % (itr, total_loss.data.cpu().numpy()))
+    print(f"{itr: >10d}: {t_val(milloss):.4f} + {t_val(loss_dis): .4f} = {t_val(total_loss): .4f}")
+
+    # print("Iteration: %d, Loss: %.4f" % (itr, total_loss.data.cpu().numpy()))
 
     optimizer.zero_grad()
     total_loss.backward()
