@@ -261,15 +261,15 @@ def train_bmn(itr, dataset, args, model, optimizer, logger, device):
     weight = model.conv_class.weight
     final_features = final_features.permute(0, 2, 1)
     element_logits = elements_cls.permute(0, 2, 1)[..., 1:]
-    casloss = WLOSS_orig(
-        final_features, element_logits, weight, labels, seq_len, device, args, None
-    )
+    # casloss = WLOSS_orig(
+    #     final_features, element_logits, weight, labels, seq_len, device, args, None
+    # )
 
     # loss_dis = refine_bmn_map(bmn_class, bmn_complete, elements_cls, labels, device, args)
 
-    total_loss = milloss + args.gamma * casloss  # + args.gamma * metric_loss + args.gamma2 * L1loss
+    total_loss = milloss
 
-    print(f"{itr: >10d}: {t_val(milloss):.4f} + {t_val(casloss): .4f} = {t_val(total_loss): .4f}")
+    print(f"{itr: >10d}: {t_val(milloss):.4f} + {t_val(0.): .4f} = {t_val(total_loss): .4f}")
 
     # print("Iteration: %d, Loss: %.4f" % (itr, total_loss.data.cpu().numpy()))
 
