@@ -179,7 +179,7 @@ def test(itr, dataset, args, model, logger, device):
 
         features = torch.from_numpy(features).float().to(device)
         features = features.unsqueeze(0)
-        element_cls, element_atn, conf_map = model(features, is_training=False)
+        element_cls, element_atn, *_ = model(features, is_training=False)
 
         atn_fg = element_atn.sigmoid() / element_atn.sigmoid().sum(-1, keepdim=True)
         y_cls = (element_cls * atn_fg).sum(-1)  # / element_atn.shape[-1]

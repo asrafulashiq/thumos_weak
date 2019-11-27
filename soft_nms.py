@@ -6,11 +6,11 @@ import numpy as np
 import torch
 
 
-def soft_nms_pytorch(dets, box_scores, sigma=0.5, thresh=0.001, cuda=0):
+def soft_nms_pytorch(xdets, box_scores, sigma=0.4, thresh=0.001, cuda=1):
     """
     Build a pytorch implement of Soft NMS algorithm.
     # Augments
-        dets:        boxes coordinate tensor (format:[x1, x2])
+        dets:        boxes coordinate tensor (format:[x1, len])
         box_scores:  box score tensors
         sigma:       variance of Gaussian function
         thresh:      score thresh
@@ -19,6 +19,7 @@ def soft_nms_pytorch(dets, box_scores, sigma=0.5, thresh=0.001, cuda=0):
         the index of the selected boxes
     """
 
+    dets = xdets.clone()
     # Indexes concatenate boxes with the last column
     N = dets.shape[0]
     if cuda:
@@ -30,7 +31,7 @@ def soft_nms_pytorch(dets, box_scores, sigma=0.5, thresh=0.001, cuda=0):
     # The order of boxes coordinate is [x1,x2]
     x1 = dets[:, 0]
     x2 = dets[:, 1]
-    scores = box_scores
+    scores = box_scores.clone()
     areas = (x2 - x1 + 1)
 
     for i in range(N):
@@ -51,14 +52,16 @@ def soft_nms_pytorch(dets, box_scores, sigma=0.5, thresh=0.001, cuda=0):
         
         w = np.maximum(0.0, xx2 - xx1 + 1)
         inter = torch.tensor(w).cuda() if cuda else torch.tensor(w)
-        ovr = torch.div(inter, (areas[i] + areas[pos:] - inter))
+        # union = (areas[i] + areas[pos:] - inter)
+        union = torch.min(areas[i], areas[pos:])
+        ovr = torch.div(inter, union)
 
         # Gaussian decay
         weight = torch.exp(-(ovr * ovr) / sigma)
         scores[pos:] = weight * scores[pos:]
 
     # select the boxes and keep the corresponding indexes
-    keep = dets[:, 2][scores > thresh].int()
+    keep = dets[:, 2][scores > thresh].long()
 
     return keep
 

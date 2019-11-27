@@ -8,7 +8,7 @@ from model import Custom_BMN
 import options
 
 # from model import Model
-from test_bmn2 import test_bmn as test_bmn
+from test_bmn2 import test as test_bmn
 # from test import test
 from train import train_bmn
 from dataset import Dataset
