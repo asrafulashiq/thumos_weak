@@ -9,6 +9,7 @@ np.random.seed(0)
 
 class Dataset:
     def __init__(self, args, mode="both"):
+        self.args = args
         self.dataset_name = args.dataset_name
         self.num_class = args.num_class
         self.feature_size = args.feature_size
@@ -127,26 +128,28 @@ class Dataset:
 
             self.classwiseidx.append(idx)
 
-    def load_data(self, n_similar=0, is_training=True, similar_size=2):
+    def load_data(self, is_training=True):
         if is_training:
             labels = []
             idx = []
+            n_similar = self.args.num_similar
+            similar_size = self.args.similar_size
 
             # Load similar pairs
-            # if n_similar != 0:
-            #     rand_classid = np.random.choice(
-            #         len(self.classwiseidx), size=n_similar, replace=False)
-            #     for rid in rand_classid:
-            #         rand_sampleid = np.random.choice(
-            #             len(self.classwiseidx[rid]),
-            #             size=similar_size, replace=False)
+            if n_similar != 0:
+                rand_classid = np.random.choice(
+                    len(self.classwiseidx), size=n_similar, replace=False)
+                for rid in rand_classid:
+                    rand_sampleid = np.random.choice(
+                        len(self.classwiseidx[rid]),
+                        size=similar_size, replace=False)
 
-            #         for k in rand_sampleid:
-            #             idx.append(self.classwiseidx[rid][k])
+                    for k in rand_sampleid:
+                        idx.append(self.classwiseidx[rid][k])
 
-            # # Load rest pairs
-            # if self.batch_size-similar_size*n_similar < 0:
-            #     self.batch_size = similar_size*n_similar
+            # Load rest pairs
+            if self.batch_size-similar_size*n_similar < 0:
+                self.batch_size = similar_size*n_similar
 
             rand_sampleid = np.random.choice(len(self.trainidx), size=self.batch_size)
 
