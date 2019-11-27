@@ -64,8 +64,8 @@ def t_val(x):
             return x.data.numpy()
 
 
-def refine_bmn_map(bmn_class, elements_cls, labels, device, args):
-    # (B, 3, cls+1, D, T), (B, cls+1, T)
+def refine_bmn_map(bmn_class, bmn_complete, elements_cls, labels, device, args):
+    # (B, 3, cls+1, D, T),  (B, cls+1, D, T), (B, cls+1, T)
 
     # gaussian smooth element logit
     elements_cls_smooth = smooth_tensor(elements_cls, dim=-1)
@@ -77,6 +77,7 @@ def refine_bmn_map(bmn_class, elements_cls, labels, device, args):
     for b, cls in label_ij:
         elements_smooth = elements_cls_smooth[b, cls + 1]  # --> (T,)
         conf_map = bmn_class[b, :, cls + 1]  # --> 3, D, T
+        conf_com = bmn_complete[b, cls+1]  # --> D, T
 
         # get valid locations
         _mask = torch.flip(torch.triu(torch.ones_like(conf_map[0]), diagonal=0), dims=[-1])
@@ -124,11 +125,18 @@ def refine_bmn_map(bmn_class, elements_cls, labels, device, args):
             _right = tmp_conf_score_right[inds[:, 1], inds[:, 0]]
             _middle = tmp_conf_score_left[inds[:, 1], inds[:, 0]]
 
-            _l1 = torch.max(2 - _left, torch.FloatTensor([0.]).cuda()).mean()
-            _l2 = torch.max(2 - _right, torch.FloatTensor([0.]).cuda()).mean()
-            _l3 = torch.max(6 - _middle, torch.FloatTensor([0.]).cuda()).mean()
+            _l1 = torch.max(2 - _left, torch.FloatTensor([0.]).cuda())
+            _l2 = torch.max(2 - _right, torch.FloatTensor([0.]).cuda())
+            _l3 = torch.max(6 - _middle, torch.FloatTensor([0.]).cuda())
 
-            loss_dis += 1./3 * (_l1 + _l2 + _l3)
+            tmp_complete = conf_com[inds[:, 1], inds[:, 0]]
+            tmp_conf_soft = tmp_complete.softmax(-1)
+
+            loss_left = (tmp_conf_soft * _l1).sum()
+            loss_right = (tmp_conf_soft * _l2).sum()
+            loss_middle = (tmp_conf_soft * _l3).sum()
+
+            loss_dis += 1./3 * (loss_left + loss_right + loss_middle)
             counter += 1
     if counter > 0:
         loss_score = loss_dis / counter
@@ -148,11 +156,11 @@ def train_bmn(itr, dataset, args, model, optimizer, logger, device):
     features = torch.from_numpy(features).float().to(device)
     labels = torch.from_numpy(labels).float().to(device)
 
-    elements_cls, elements_atn, bmn_class = model(features)
+    elements_cls, elements_atn, bmn_class, bmn_complete = model(features)
     # --> (B, cls+1, T), (B, 1, T), (B, 3, cls+1, D, T)
     milloss = MILL_atn(elements_cls, elements_atn, seq_len, labels, device)
 
-    loss_dis = refine_bmn_map(bmn_class, elements_cls, labels, device, args)
+    loss_dis = refine_bmn_map(bmn_class, bmn_complete, elements_cls, labels, device, args)
 
     total_loss = milloss + args.gamma * loss_dis  # + args.gamma * metric_loss + args.gamma2 * L1loss
 

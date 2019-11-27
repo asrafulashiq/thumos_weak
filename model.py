@@ -89,7 +89,7 @@ class Custom_BMN(nn.Module):
         self.feat_dim = args.feature_size
 
         self.hidden_dim_1d = 512
-        self.hidden_dim_2d = 512
+        self.hidden_dim_2d = 128
 
         self.n_class = args.num_class
 
@@ -109,29 +109,20 @@ class Custom_BMN(nn.Module):
         self.conv_atn = nn.Conv1d(self.hidden_dim_1d, 1, 3, padding=1)
 
         # Proposal Evaluation Module
-        # self.conv_2d_p = nn.Sequential(
-        #     nn.Conv2d(
-        #         3 * self.hidden_dim_1d,
-        #         3 * self.hidden_dim_2d,
-        #         kernel_size=(1, 1),
-        #         groups=3,
-        #     ),
-        #     nn.ReLU(inplace=True),
-        #     nn.Dropout(0.6),
-        # )
+        self.conv_2d_p = nn.Sequential(
+            nn.Conv2d(
+                3 * self.hidden_dim_1d,
+                3 * self.hidden_dim_2d,
+                kernel_size=(1, 1),
+                groups=3,
+            ),
+            nn.ReLU(inplace=True),
+            nn.Dropout2d(0.6),
+        )
 
-        # self.conv_conf = nn.Sequential(
-        #     nn.Conv2d(3 * self.hidden_dim_2d, self.n_class, kernel_size=1)
-        # )
-
-        # self.conv_conf = nn.Sequential(
-        #     nn.Conv2d(3 * self.hidden_dim_2d, self.n_class, kernel_size=1)
-        # )
-
-        # self.conv_attn = nn.Sequential(
-        #     nn.Conv2d(3 * self.hidden_dim_2d, 1, kernel_size=1),
-        #     nn.Sigmoid()
-        # )
+        self.conv_conf = nn.Sequential(
+            nn.Conv2d(3 * self.hidden_dim_2d, self.n_class+1, kernel_size=1)
+        )
 
         self.apply(weights_init)
 
@@ -159,8 +150,17 @@ class Custom_BMN(nn.Module):
         bmn_class = bmn_class[..., self.pad: -self.pad]  # --> ..., T
         y_class = y_class[..., self.pad: -self.pad]  # --> ..., T
         y_atn = y_atn[..., self.pad: -self.pad]  # --> ..., T
+        # completeness score
+        if is_training:
+            bmn_feat = self._boundary_matching_layer(x_feature, self.sample_mask, self.seq_len_pad, self.tscale)
+            bmn_feat = bmn_feat[..., self.pad: -self.pad]  # --> B, 3, C, D, T
+            bmn_feat = bmn_feat.reshape(B, -1, self.tscale, self.seq_len)
+            bmn_feat_inter = self.conv_2d_p(bmn_feat)
+            bmn_completeness = self.conv_conf(bmn_feat_inter)
+        else:
+            bmn_completeness = None
 
-        return y_class, y_atn, bmn_class
+        return y_class, y_atn, bmn_class, bmn_completeness
 
     def _boundary_matching_layer(self, x, sample_mask, seq_len, tscale):
         input_size = x.size()  # B, C, T
