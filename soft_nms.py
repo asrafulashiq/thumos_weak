@@ -63,7 +63,7 @@ def soft_nms_pytorch(xdets, box_scores, sigma=0.4, thresh=0.001, cuda=1):
     # select the boxes and keep the corresponding indexes
     keep = dets[:, 2][scores > thresh].long()
 
-    return keep
+    return keep, dets[:, 2].long()
 
 
 def speed():

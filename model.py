@@ -108,21 +108,21 @@ class Custom_BMN(nn.Module):
         # attention module
         self.conv_atn = nn.Conv1d(self.hidden_dim_1d, 1, 3, padding=1)
 
-        # # Proposal Evaluation Module
-        # self.conv_2d_p = nn.Sequential(
-        #     nn.Conv2d(
-        #         3 * self.hidden_dim_1d,
-        #         3 * self.hidden_dim_2d,
-        #         kernel_size=(1, 1),
-        #         groups=3,
-        #     ),
-        #     nn.ReLU(inplace=True),
-        #     nn.Dropout2d(0.6),
-        # )
+        # Proposal Evaluation Module
+        self.conv_2d_p = nn.Sequential(
+            nn.Conv2d(
+                3 * self.hidden_dim_1d,
+                3 * self.hidden_dim_2d,
+                kernel_size=(1, 1),
+                groups=3,
+            ),
+            nn.ReLU(inplace=True),
+            nn.Dropout2d(0.6),
+        )
 
-        # self.conv_conf = nn.Sequential(
-        #     nn.Conv2d(3 * self.hidden_dim_2d, self.n_class+1, kernel_size=1)
-        # )
+        self.conv_conf = nn.Sequential(
+            nn.Conv2d(3 * self.hidden_dim_2d, self.n_class+1, kernel_size=1)
+        )
 
         self.apply(weights_init)
 
@@ -136,33 +136,33 @@ class Custom_BMN(nn.Module):
         y_class = self.conv_class(x_feature)  # --> B, cls, T'
         y_atn = self.conv_atn(x_feature)  # --> B, 1, T'
 
-        # if is_training:
-        #     bmn_class = self._boundary_matching_layer(y_class, self.sample_mask, self.seq_len, self.tscale)
-        # else:
-        #     tscale = min(T // 4, 50)
-        #     sample_mask = self._get_interp1d_mask(T, tscale)
-        #     bmn_class = self._boundary_matching_layer(y_class, sample_mask, T, tscale)
-        # bmn_class = None
+        if is_training:
+            bmn_class = self._boundary_matching_layer(y_class, self.sample_mask, self.seq_len, self.tscale)
+        else:
+            tscale = min(T // 4, 50)
+            sample_mask = self._get_interp1d_mask(T, tscale)
+            bmn_class = self._boundary_matching_layer(y_class, sample_mask, T, tscale)
+        bmn_class = None
 
-        # bmn_class = self._boundary_matching_layer(
-        #     y_class, self.sample_mask, self.seq_len_pad, self.tscale
-        # )  # --> B, 3, -1, D, T'
-        # bmn_class = bmn_class[..., self.pad: -self.pad]  # --> ..., T
+        bmn_class = self._boundary_matching_layer(
+            y_class, self.sample_mask, self.seq_len_pad, self.tscale
+        )  # --> B, 3, -1, D, T'
+        bmn_class = bmn_class[..., self.pad: -self.pad]  # --> ..., T
         y_class = y_class[..., self.pad: -self.pad]  # --> ..., T
         y_atn = y_atn[..., self.pad: -self.pad]  # --> ..., T
         x_feature_unpad = x_feature[..., self.pad: -self.pad]
         # # completeness score
-        # if is_training:
-        #     bmn_feat = self._boundary_matching_layer(x_feature, self.sample_mask, self.seq_len_pad, self.tscale)
-        #     bmn_feat = bmn_feat[..., self.pad: -self.pad]  # --> B, 3, C, D, T
-        #     bmn_feat = bmn_feat.reshape(B, -1, self.tscale, self.seq_len)
-        #     bmn_feat_inter = self.conv_2d_p(bmn_feat)
-        #     bmn_completeness = self.conv_conf(bmn_feat_inter)
-        # else:
-        #     bmn_completeness = None
-        bmn_class, bmn_completeness = None, None
+        if is_training:
+            bmn_feat = self._boundary_matching_layer(x_feature, self.sample_mask, self.seq_len_pad, self.tscale)
+            bmn_feat = bmn_feat[..., self.pad: -self.pad]  # --> B, 3, C, D, T
+            bmn_feat_flat = bmn_feat.reshape(B, -1, self.tscale, self.seq_len)
+            bmn_feat_inter = self.conv_2d_p(bmn_feat_flat)
+            bmn_completeness = self.conv_conf(bmn_feat_inter)
+        else:
+            bmn_completeness = None
+        # bmn_class, bmn_completeness = None, None
 
-        return y_class, y_atn, x_feature_unpad, bmn_class, bmn_completeness
+        return y_class, y_atn, bmn_feat_flat, bmn_class, bmn_completeness
 
     def _boundary_matching_layer(self, x, sample_mask, seq_len, tscale):
         input_size = x.size()  # B, C, T
