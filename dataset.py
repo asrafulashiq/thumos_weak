@@ -151,7 +151,7 @@ class Dataset:
             if self.batch_size-similar_size*n_similar < 0:
                 self.batch_size = similar_size*n_similar
 
-            rand_sampleid = np.random.choice(len(self.trainidx), size=self.batch_size)
+            rand_sampleid = np.random.choice(len(self.trainidx), size=self.batch_size-n_similar*similar_size)
 
             for r in rand_sampleid:
                 idx.append(self.trainidx[r])

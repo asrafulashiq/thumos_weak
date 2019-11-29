@@ -20,6 +20,29 @@ def weights_init(m):
             pass
 
 
+class Model_cls(nn.Module):
+    def __init__(self, args):
+        super().__init__()
+        n_class = args.num_class
+        n_feature = args.feature_size
+        self.filt_conv = nn.Sequential(
+            nn.Conv1d(n_feature, 512, 1), nn.ReLU(), nn.Dropout2d(0.5),
+            nn.Conv1d(512, 512, 3, padding=1), nn.ReLU(), nn.Dropout2d(0.5)
+        )
+        self.conv_atn = nn.Conv1d(512, 1, 3, padding=1)
+        self.conv_class = nn.Conv1d(512, n_class + 1, 1, bias=False)
+        self.apply(weights_init)
+
+    def forward(self, x):
+        x = x.permute(0, 2, 1)
+        x = self.filt_conv(x)  # --> B, 512, T
+        x_atn = self.conv_atn(x)  # B, 1, T
+        x_full = (x_atn.softmax(-1) * x).sum(-1, keepdim=True)
+        y = self.conv_class(x_full)  # --> B, cls+1, 1
+        y = y.squeeze(-1)
+        return y
+
+
 class Model_orig(torch.nn.Module):
     def __init__(self, n_feature, n_class):
         super(Model_orig, self).__init__()
@@ -136,18 +159,11 @@ class Custom_BMN(nn.Module):
         y_class = self.conv_class(x_feature)  # --> B, cls, T'
         y_atn = self.conv_atn(x_feature)  # --> B, 1, T'
 
-        if is_training:
-            bmn_class = self._boundary_matching_layer(y_class, self.sample_mask, self.seq_len, self.tscale)
-        else:
-            tscale = min(T // 4, 50)
-            sample_mask = self._get_interp1d_mask(T, tscale)
-            bmn_class = self._boundary_matching_layer(y_class, sample_mask, T, tscale)
-        bmn_class = None
-
         bmn_class = self._boundary_matching_layer(
             y_class, self.sample_mask, self.seq_len_pad, self.tscale
         )  # --> B, 3, -1, D, T'
         bmn_class = bmn_class[..., self.pad: -self.pad]  # --> ..., T
+
         y_class = y_class[..., self.pad: -self.pad]  # --> ..., T
         y_atn = y_atn[..., self.pad: -self.pad]  # --> ..., T
         x_feature_unpad = x_feature[..., self.pad: -self.pad]
@@ -158,17 +174,18 @@ class Custom_BMN(nn.Module):
             bmn_feat_flat = bmn_feat.reshape(B, -1, self.tscale, self.seq_len)
             bmn_feat_inter = self.conv_2d_p(bmn_feat_flat)
             bmn_completeness = self.conv_conf(bmn_feat_inter)
+            # bmn_completeness = None
         else:
             bmn_completeness = None
-        # bmn_class, bmn_completeness = None, None
+            bmn_feat = None
 
-        return y_class, y_atn, bmn_feat_flat, bmn_class, bmn_completeness
+        return y_class, y_atn, bmn_feat, bmn_class, bmn_completeness, x_feature_unpad
 
     def _boundary_matching_layer(self, x, sample_mask, seq_len, tscale):
         input_size = x.size()  # B, C, T
 
         # (B, C, T) x (T, N x D x T) --> B, C, N , D , T
-        out = torch.matmul(x, sample_mask.view(self.sample_mask.shape[0], -1)).reshape(
+        out = torch.matmul(x, sample_mask.view(sample_mask.shape[0], -1)).reshape(
             input_size[0], input_size[1], self.num_sample, tscale, seq_len
         )
 

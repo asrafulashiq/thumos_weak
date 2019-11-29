@@ -5,12 +5,11 @@ from soft_nms import soft_nms_pytorch
 
 
 def batch_per_dis(X1, X2, w):
-    X1 = X1.permute(2, 1, 0).unsqueeze(2)
-    X2 = X2.permute(2, 1, 0).unsqueeze(1)
+    X1 = X1.permute(1, 0).unsqueeze(1)
+    X2 = X2.permute(1, 0).unsqueeze(0)
 
-    X_d = X1 - X2
-    X_diff = X_d.view(X_d.shape[0], X_d.shape[1] * X_d.shape[2], -1)
-
+    # X_d = X1 - X2
+    # X_diff = X_d.view(X_d.shape[0], X_d.shape[1] * X_d.shape[2], -1)
     # w = w.unsqueeze(-1)
     # dis_mat = torch.bmm(X_diff, w).squeeze(-1)
     # dis_mat = dis_mat.view(dis_mat.shape[0], X_d.shape[1], X_d.shape[2])
@@ -38,68 +37,68 @@ def get_per_dis(x1, x2, w):
     return dis_mat
 
 
-def WLOSS_orig(x, element_logits, weight, labels, seq_len, device, args, gt_all=None):
+# def WLOSS_orig(x, element_logits, weight, labels, seq_len, device, args, gt_all=None):
 
-    sim_loss = 0.0
-    n_tmp = 0.0
+#     sim_loss = 0.0
+#     n_tmp = 0.0
 
-    if gt_all is not None:
-        sim_loss_gt = 0.0
+#     if gt_all is not None:
+#         sim_loss_gt = 0.0
 
-    element_logits = F.hardtanh(element_logits, -args.clip, args.clip)
-    for i in range(0, args.num_similar * args.similar_size, args.similar_size):
-        lab = labels[i, :]
-        for k in range(i + 1, i + args.similar_size):
-            lab = lab * labels[k, :]
+#     element_logits = F.hardtanh(element_logits, -args.clip, args.clip)
+#     for i in range(0, args.num_similar * args.similar_size, args.similar_size):
+#         lab = labels[i, :]
+#         for k in range(i + 1, i + args.similar_size):
+#             lab = lab * labels[k, :]
 
-        common_ind = lab.nonzero().squeeze(-1)
+#         common_ind = lab.nonzero().squeeze(-1)
 
-        Xh = torch.Tensor()
-        Xl = torch.Tensor()
+#         Xh = torch.Tensor()
+#         Xl = torch.Tensor()
 
-        for k in range(i, i + args.similar_size):
-            elem = element_logits[k][: seq_len[k], common_ind]
-            atn = F.softmax(elem, dim=0)
-            n1 = torch.FloatTensor([np.maximum(seq_len[k] - 1, 1)]).to(device)
-            atn_l = (1 - atn) / n1
+#         for k in range(i, i + args.similar_size):
+#             elem = element_logits[k][: seq_len[k], common_ind]
+#             atn = F.softmax(elem, dim=0)
+#             n1 = torch.FloatTensor([np.maximum(seq_len[k] - 1, 1)]).to(device)
+#             atn_l = (1 - atn) / n1
 
-            xh = torch.mm(torch.transpose(x[k][: seq_len[k]], 1, 0), atn)
-            xl = torch.mm(torch.transpose(x[k][: seq_len[k]], 1, 0), atn_l)
-            xh = xh.unsqueeze(1)
-            xl = xl.unsqueeze(1)
-            Xh = torch.cat([Xh, xh], dim=1)
-            Xl = torch.cat([Xl, xl], dim=1)
+#             xh = torch.mm(torch.transpose(x[k][: seq_len[k]], 1, 0), atn)
+#             xl = torch.mm(torch.transpose(x[k][: seq_len[k]], 1, 0), atn_l)
+#             xh = xh.unsqueeze(1)
+#             xl = xl.unsqueeze(1)
+#             Xh = torch.cat([Xh, xh], dim=1)
+#             Xl = torch.cat([Xl, xl], dim=1)
 
-        Xh = get_unit_vector(Xh, dim=0)
-        Xl = get_unit_vector(Xl, dim=0)
+#         Xh = get_unit_vector(Xh, dim=0)
+#         Xl = get_unit_vector(Xl, dim=0)
 
-        D1 = batch_per_dis(Xh, Xh, weight[common_ind, :])
+#         D1 = batch_per_dis(Xh, Xh, None)
 
-        D1 = torch.triu(D1, diagonal=1)
-        D1 = D1.view(D1.shape[0], -1)
-        d1 = torch.sum(D1, -1) / (args.similar_size*(args.similar_size-1)/2)
+#         D1 = torch.triu(D1, diagonal=1)
+#         D1 = D1.view(D1.shape[0], -1)
+#         d1 = torch.sum(D1, -1) / (args.similar_size*(args.similar_size-1)/2)
 
-        D2 = batch_per_dis(Xh, Xl, weight[common_ind, :])
+#         D2 = batch_per_dis(Xh, Xl, None)
 
-        D2 = D2 * (1-torch.eye(D2.shape[1])).unsqueeze(0)
-        D2 = D2.view(D2.shape[0], -1)
+#         D2 = D2 * (1-torch.eye(D2.shape[1])).unsqueeze(0)
+#         D2 = D2.view(D2.shape[0], -1)
 
-        d2 = torch.sum(D2, -1) / (args.similar_size*(args.similar_size-1))
+#         d2 = torch.sum(D2, -1) / (args.similar_size*(args.similar_size-1))
 
-        loss = torch.sum(torch.max(
-            d1 - d2 + args.dis, torch.FloatTensor([0.0]).to(device)
-        ))
+#         loss = torch.sum(torch.max(
+#             d1 - d2 + args.dis, torch.FloatTensor([0.0]).to(device)
+#         ))
 
-        sim_loss += loss
+#         sim_loss += loss
 
-        n_tmp = n_tmp + torch.sum(lab)
+#         n_tmp = n_tmp + torch.sum(lab)
 
-    sim_loss = sim_loss / n_tmp
-    if gt_all is not None:
-        sim_loss_gt = sim_loss_gt / x.shape[0]
-        return sim_loss, sim_loss_gt
+#     sim_loss = sim_loss / n_tmp
+#     if gt_all is not None:
+#         sim_loss_gt = sim_loss_gt / x.shape[0]
+#         return sim_loss, sim_loss_gt
 
-    return sim_loss
+#     return sim_loss
 
 
 def MILL(element_logits, seq_len, labels, device):
@@ -151,6 +150,14 @@ def MILL_atn(elements_cls, elements_atn, seq_len, labels, device):
     loss = milloss_fg + 0.1 * milloss_bg
     return loss
 
+def get_bg_feat(x, elements_atn):
+    _bg = 1 - elements_atn.sigmoid()
+    atn_bg = _bg / _bg.sum(-1, keepdim=True)
+    x_bg = (atn_bg * x).sum(-1)
+
+    return x_bg
+
+
 
 def t_val(x):
     if not isinstance(x, torch.Tensor):
@@ -165,7 +172,7 @@ def t_val(x):
 def get_proposal(b, cls, bmn_class, bmn_complete, elements_cls_smooth, labels, device, args):
     elements_smooth = elements_cls_smooth[b, cls + 1]  # --> (T,)
     conf_map = bmn_class[b, :, cls + 1]  # --> 3, D, T
-    conf_com = bmn_complete[b, cls + 1]  # --> D, T
+    # conf_com = bmn_complete[b, cls + 1]  # --> D, T
 
     # get valid locations
     _mask = torch.flip(torch.triu(torch.ones_like(conf_map[0]), diagonal=0), dims=[-1])
@@ -213,8 +220,8 @@ def get_proposal(b, cls, bmn_class, bmn_complete, elements_cls_smooth, labels, d
     return inds   # statrt, duration
 
 
-def refine_bmn_map(bmn_features, bmn_class, bmn_complete, elements_cls, labels, device, args):
-    # (B, 3, cls+1, D, T),  (B, cls+1, D, T), (B, cls+1, T)
+def refine_bmn_map(bmn_features, bmn_class, bmn_complete, elements_cls, elements_atn, final_features, labels, device, args):
+    # (B, 3, C, D, T), (B, 3, cls+1, D, T),  (B, cls+1, D, T), (B, cls+1, T)
 
     # gaussian smooth element logit
     # elements_cls_smooth = smooth_tensor(elements_cls, dim=-1)
@@ -226,44 +233,63 @@ def refine_bmn_map(bmn_features, bmn_class, bmn_complete, elements_cls, labels, 
         lab = labels[i, :]
         for k in range(i + 1, i + args.similar_size):
             lab = lab * labels[k, :]
-
         common_ind = lab.nonzero().squeeze(-1)
         rand_ind = torch.randperm(common_ind.shape[0])[0]
-        common_ind = common_ind[[rand_ind]]
+        common_ind = common_ind[rand_ind]
 
-        Xh = torch.Tensor()
+        Xh_s = torch.Tensor()
+        Xh_m = torch.Tensor()
+        Xh_e = torch.Tensor()
         Xl = torch.Tensor()
 
         for k in range(i, i + args.similar_size):
-            ind_h = get_proposal(i, common_ind[0], bmn_class, bmn_complete,
+            ind_h = get_proposal(k, common_ind, bmn_class, bmn_complete,
                 elements_cls, labels, device, args)
-            xh = bmn_features[i, :, ind_h[:, 1], ind_h[:, 0]]  # 3*c, ...
-            xh = xh.unsqueeze(1)
 
-            ind_l = get_proposal(i, -1, bmn_class, bmn_complete,
-                elements_cls, labels, device, args)
-            xl = bmn_features[i, :, ind_l[:, 1], ind_l[:, 0]]  # 3*c, ...
+            comp_s = bmn_complete[k, common_ind+1, ind_h[:, 1], ind_h[:, 0]].softmax(-1).unsqueeze(0)
+            xh_s = bmn_features[k, 0, :, ind_h[:, 1], ind_h[:, 0]]  #  c, ...
+            xh_s = (xh_s * comp_s).sum(-1).unsqueeze(1)
+            xh_m = bmn_features[k, 1, :, ind_h[:, 1], ind_h[:, 0]]  #  c, ...
+            xh_m = (xh_m * comp_s).sum(-1).unsqueeze(1)
+            xh_e = bmn_features[k, 2, :, ind_h[:, 1], ind_h[:, 0]]  #  c, ...
+            xh_e = (xh_e * comp_s).sum(-1).unsqueeze(1)
+
+            xl = get_bg_feat(final_features[k], elements_atn[k])
             xl = xl.unsqueeze(1)
 
-            Xh = torch.cat([Xh, xh], dim=1)
+            Xh_s = torch.cat([Xh_s, xh_s], dim=1)
+            Xh_m = torch.cat([Xh_m, xh_m], dim=1)
+            Xh_e = torch.cat([Xh_e, xh_e], dim=1)
             Xl = torch.cat([Xl, xl], dim=1)
 
-        Xh = get_unit_vector(Xh, dim=0)
+        Xh_s = get_unit_vector(Xh_s, dim=0)
+        Xh_m = get_unit_vector(Xh_m, dim=0)
+        Xh_e = get_unit_vector(Xh_e, dim=0)
         Xl = get_unit_vector(Xl, dim=0)
 
-        D1 = batch_per_dis(Xh, Xh, None)
-
+        D1 = batch_per_dis(Xh_s, Xh_s, None)
         D1 = torch.triu(D1, diagonal=1)
         D1 = D1.view(D1.shape[0], -1)
-        d1 = torch.sum(D1, -1) / (args.similar_size*(args.similar_size-1)/2)
+        d1_s = torch.sum(D1) / (args.similar_size*(args.similar_size-1)/2)
 
-        D2 = batch_per_dis(Xh, Xl, None)
+        D1 = batch_per_dis(Xh_m, Xh_m, None)
+        D1 = torch.triu(D1, diagonal=1)
+        D1 = D1.view(D1.shape[0], -1)
+        d1_m = torch.sum(D1) / (args.similar_size*(args.similar_size-1)/2)
 
+        D1 = batch_per_dis(Xh_e, Xh_e, None)
+        D1 = torch.triu(D1, diagonal=1)
+        D1 = D1.view(D1.shape[0], -1)
+        d1_e = torch.sum(D1) / (args.similar_size*(args.similar_size-1)/2)
+
+        d1 = (d1_s + d1_m + d1_e) / 3
+
+        D2 = batch_per_dis(Xh_m, Xl, None)
         tt = torch.ones_like(D2)
-        D2 = D2 * (torch.triu(tt) - torch.triu(tt, 1)).unsqueeze(0)
+        D2 = D2 * (torch.triu(tt) - torch.triu(tt, 1))
         D2 = D2.view(D2.shape[0], -1)
 
-        d2 = torch.sum(D2, -1) / (args.similar_size*(args.similar_size-1))
+        d2 = torch.sum(D2) / (args.similar_size)
 
         loss = torch.sum(torch.max(
             d1 - d2 + args.dis, torch.FloatTensor([0.0]).to(device)
@@ -287,24 +313,59 @@ def train_bmn(itr, dataset, args, model, optimizer, logger, device):
     features = torch.from_numpy(features).float().to(device)
     labels = torch.from_numpy(labels).float().to(device)
 
-    elements_cls, elements_atn, bmn_features, bmn_class, bmn_complete = model(features)
+    elements_cls, elements_atn, bmn_features, bmn_class, bmn_complete, final_features = model(features)
     # --> (B, cls+1, T), (B, 1, T), (B, 3, cls+1, D, T)
     milloss = MILL_atn(elements_cls, elements_atn, seq_len, labels, device)
 
-    weight = model.conv_class.weight
-    final_features = final_features.permute(0, 2, 1)
-    element_logits = elements_cls.permute(0, 2, 1)[..., 1:]
+    # weight = model.conv_class.weight
+    # final_features = final_features.permute(0, 2, 1)
+    # element_logits = elements_cls.permute(0, 2, 1)[..., 1:]
     # casloss = WLOSS_orig(
     #     final_features, element_logits, weight, labels, seq_len, device, args, None
     # )
 
-    loss_dis = refine_bmn_map(bmn_features, bmn_class, bmn_complete, elements_cls, labels, device, args)
+    loss_dis = refine_bmn_map(bmn_features, bmn_class, bmn_complete, elements_cls, elements_atn,
+            final_features, labels, device, args)
+
+    total_loss = milloss + args.gamma * loss_dis
+
+    print(f"{itr: >10d}: {t_val(milloss):.4f} + {t_val(loss_dis): .4f} = {t_val(total_loss): .4f}")
+
+    # print("Iteration: %d, Loss: %.4f" % (itr, total_loss.data.cpu().numpy()))
+
+    optimizer.zero_grad()
+    total_loss.backward()
+    optimizer.step()
+
+    return total_loss.data.cpu().numpy()
+
+
+def train_class(itr, dataset, args, model, optimizer, logger, device):
+    model.train()
+    features, labels = dataset.load_data()
+    seq_len = np.sum(np.max(np.abs(features), axis=2) > 0, axis=1)
+    # features = features[:, : np.max(seq_len), :]
+
+    features = torch.from_numpy(features).float().to(device)
+    labels = torch.from_numpy(labels).float().to(device)
+
+    pred = model(features)
+    labels_with_back = torch.ones(labels.shape[0], labels.shape[1]+1).cuda().float()
+    labels_with_back[:, 1:] = labels
+
+    weights = torch.ones_like(labels_with_back)
+    pos_sum = labels_with_back.sum() / (labels_with_back.shape[0]* labels_with_back.shape[1])
+    weights[labels_with_back > 0] = 1 - pos_sum
+    weights[labels_with_back == 0.] = pos_sum
+    
+
+    milloss = F.binary_cross_entropy_with_logits(pred, labels_with_back)
 
     total_loss = milloss
 
-    print(f"{itr: >10d}: {t_val(milloss):.4f} + {t_val(0.): .4f} = {t_val(total_loss): .4f}")
+    # print(f"{itr: >10d}: {t_val(milloss):.4f} + {t_val(0.): .4f} = {t_val(total_loss): .4f}")
 
-    # print("Iteration: %d, Loss: %.4f" % (itr, total_loss.data.cpu().numpy()))
+    print("Iteration: %d, Loss: %.4f" % (itr, total_loss.data.cpu().numpy()))
 
     optimizer.zero_grad()
     total_loss.backward()

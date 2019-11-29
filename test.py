@@ -11,7 +11,44 @@ from tqdm import tqdm
 
 from eval_detection import ANETdetection
 
-torch.set_default_tensor_type("torch.cuda.FloatTensor")
+@torch.no_grad()
+def test_class(itr, dataset, args, model, logger, device):
+
+    # model.eval()
+
+    done = False
+    instance_logits_stack = []
+    element_logits_stack = []
+    labels_stack = []
+    while not done:
+        if dataset.currenttestidx % 100 == 0:
+            print(
+                "Testing test data point %d of %d"
+                % (dataset.currenttestidx, len(dataset.testidx))
+            )
+
+        features, labels, done = dataset.load_data(is_training=False)
+        features = torch.from_numpy(features).float().to(device)
+        features = features.unsqueeze(0)
+        element_cls = model(features)
+        element_logits = (element_cls).sigmoid()
+        element_logits = element_logits.squeeze(0)[..., 1:]
+        tmp = (
+            element_logits
+            .cpu()
+            .data.numpy()
+        )
+
+        instance_logits_stack.append(tmp)
+        labels_stack.append(labels)
+
+    instance_logits_stack = np.array(instance_logits_stack)
+    labels_stack = np.array(labels_stack)
+
+    cmap = cmAP(instance_logits_stack, labels_stack)
+    print("Classification map %f" % cmap)
+
+
 
 @torch.no_grad()
 def test(itr, dataset, args, model, logger, device):
