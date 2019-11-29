@@ -20,6 +20,25 @@ def weights_init(m):
             pass
 
 
+class Model_LPAT(nn.Module):
+    def __init__(self, args):
+        super().__init__()
+        n_class = args.num_class
+        n_feature = args.feature_size
+        self.filt_conv = nn.Sequential(
+            nn.Conv1d(n_feature, n_feature, 1), nn.ReLU(), nn.Dropout2d(0.6)
+        )
+        self.conv_class = nn.Conv1d(n_feature, n_class + 1, 1, bias=False)
+        self.apply(weights_init)
+
+    def forward(self, x):
+        x = x.permute(0, 2, 1)
+        x = self.filt_conv(x)  # --> B, 2048, T
+        x = self.conv_class(x)  # --> B, cls+1, T
+        x = x.permute(0, 2, 1)  # B, T, cls+1
+        return x
+
+
 class Model_cls(nn.Module):
     def __init__(self, args):
         super().__init__()
