@@ -135,23 +135,24 @@ class Dataset:
             n_similar = self.args.num_similar
             similar_size = self.args.similar_size
 
-            # Load similar pairs
-            if n_similar != 0:
-                rand_classid = np.random.choice(
-                    len(self.classwiseidx), size=n_similar, replace=False)
-                for rid in rand_classid:
-                    rand_sampleid = np.random.choice(
-                        len(self.classwiseidx[rid]),
-                        size=similar_size, replace=False)
+            # # Load similar pairs
+            # if n_similar != 0:
+            #     rand_classid = np.random.choice(
+            #         len(self.classwiseidx), size=n_similar, replace=False)
+            #     for rid in rand_classid:
+            #         rand_sampleid = np.random.choice(
+            #             len(self.classwiseidx[rid]),
+            #             size=similar_size, replace=False)
 
-                    for k in rand_sampleid:
-                        idx.append(self.classwiseidx[rid][k])
+            #         for k in rand_sampleid:
+            #             idx.append(self.classwiseidx[rid][k])
 
-            # Load rest pairs
-            if self.batch_size-similar_size*n_similar < 0:
-                self.batch_size = similar_size*n_similar
+            # # Load rest pairs
+            # if self.batch_size-similar_size*n_similar < 0:
+            #     self.batch_size = similar_size*n_similar
 
-            rand_sampleid = np.random.choice(len(self.trainidx), size=self.batch_size-n_similar*similar_size)
+            # rand_sampleid = np.random.choice(len(self.trainidx), size=self.batch_size-n_similar*similar_size)
+            rand_sampleid = np.random.choice(len(self.trainidx), size=self.batch_size)
 
             for r in rand_sampleid:
                 idx.append(self.trainidx[r])

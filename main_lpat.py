@@ -3,11 +3,11 @@ import os
 import torch
 import torch.optim as optim
 
-from model import Model_cls as Model
+from model import Model_LPAT as Model
 import options
 
 # from model import Model
-from test import test_class
+from test import test_lpat as test
 from train_prop import train_lpat as train
 from dataset import Dataset
 from tensorboardX import SummaryWriter
@@ -47,7 +47,7 @@ if __name__ == "__main__":
             optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
     if args.test:
-        test_class(init_itr, dataset, args, model, logger, device)
+        test(init_itr, dataset, args, model, logger, device)
         raise SystemExit
 
     best_dmap_itr = (0, init_itr)
@@ -69,4 +69,4 @@ if __name__ == "__main__":
             )
         if itr % 200 == 0:
             print("Iter: {}".format(itr))
-            dmap = test_class(itr, dataset, args, model, logger, device)
+            dmap = test(itr, dataset, args, model, logger, device)
